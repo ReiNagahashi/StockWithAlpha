@@ -8,6 +8,7 @@ import (
 
 type ConfigList struct{
 	ApiKey string
+	LogFile string
 }
 
 
@@ -23,5 +24,6 @@ func init(){
 
 	Config = ConfigList{
 		ApiKey: cfg.Section("alpha_vantage").Key("api_key").String(),
+		LogFile: cfg.Section("stockWithAlpha").Key("log_file").String(),
 	}
 }

@@ -1,10 +1,14 @@
 package main
 
 import (
-	"fmt"
+	// "fmt"
+	"log"
 	"stock-with-alpha/config"
+	"stock-with-alpha/utils"
 )
 
 func main(){
-	fmt.Println(config.Config.ApiKey)
+	utils.LoggingSettings(config.Config.LogFile)
+	// fmt.Println(config.Config.ApiKey)
+	log.Println("test")
 }
