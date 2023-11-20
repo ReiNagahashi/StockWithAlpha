@@ -1,14 +1,18 @@
 package main
 
 import (
-	// "fmt"
-	"log"
+	"fmt"
+	// "log"
+	"stock-with-alpha/alpha"
 	"stock-with-alpha/config"
 	"stock-with-alpha/utils"
 )
 
 func main(){
 	utils.LoggingSettings(config.Config.LogFile)
-	// fmt.Println(config.Config.ApiKey)
-	log.Println("test")
+	apiClient := alpha.New(config.Config.ApiKey)
+	ticker, _ := apiClient.GetTicker("BA", "GLOBAL_QUOTE")
+	fmt.Println(ticker)
+
 }
+
