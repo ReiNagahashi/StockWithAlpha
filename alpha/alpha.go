@@ -52,11 +52,6 @@ func (api *APIClient) doRequest(method, urlPath string, query map[string]string,
 	if err != nil{
 		return
 	}
-
-	// q := req.URL.Query()
-	// for key, val := range query{
-	// 	q.Add(key, val)
-	// }
 	req.URL.RawQuery = req.URL.Query().Encode()
 
 	resp, err := api.httpClient.Do(req)

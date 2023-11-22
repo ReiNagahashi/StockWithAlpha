@@ -20,5 +20,7 @@
 # Go workspace file
 go.work
 
-# Ignore config.ini
+# select files manually 
 config.ini
+stockWithAlpha.log
+stockdata.sql
