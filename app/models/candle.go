@@ -94,3 +94,31 @@ func CreateCandle(ticker alpha.Ticker, symbol string, dateTime time.Time) bool{
 
 	return false
 }
+
+func GetAllCandle(symbol string, limit int) (dfCandle *DataFrameCandle, err error){
+	tableName := GetCandleTableName(symbol)
+	cmd := fmt.Sprintf(`SELECT * FROM (
+		SELECT time, open, close, high, low, volume FROM %s ORDER BY time DESC LIMIT ?
+	) ORDER BY time ASC;`, tableName)
+
+	rows, err := DbConnection.Query(cmd, limit)
+	if err != nil{
+		return
+	}
+	defer rows.Close()
+
+	dfCandle = &DataFrameCandle{}
+	dfCandle.Symbol = symbol
+	for rows.Next(){
+		var candle Candle
+		candle.Symbol = symbol
+		rows.Scan(&candle.DateTime, &candle.Open, &candle.Close, &candle.High, &candle.Low, &candle.Volume)
+		dfCandle.Candles = append(dfCandle.Candles, candle)
+	}
+	err = rows.Err()
+	if err != nil{
+		return 
+	}
+
+	return dfCandle, nil
+}
