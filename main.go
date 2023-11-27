@@ -8,7 +8,7 @@ import (
 
 func main(){
 	utils.LoggingSettings(config.Config.LogFile)
-	controllers.StreamIngestionData()
+	// controllers.StreamIngestionData()
 	controllers.StartWebServer()
 }
 

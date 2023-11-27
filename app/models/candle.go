@@ -2,6 +2,7 @@ package models
 
 import (
 	"fmt"
+	"log"
 	"stock-with-alpha/alpha"
 	"strconv"
 	"time"
@@ -97,6 +98,8 @@ func CreateCandle(ticker alpha.Ticker, symbol string, dateTime time.Time) bool{
 
 func GetAllCandle(symbol string, limit int) (dfCandle *DataFrameCandle, err error){
 	tableName := GetCandleTableName(symbol)
+	// 一旦ティッカーデータ群をリバースした上でリミットすることで、最新のデータをリミットして取得できるようにする
+	// ただし、リバースしたらあとはもとに戻しておくこと(最後にASCにしている)
 	cmd := fmt.Sprintf(`SELECT * FROM (
 		SELECT time, open, close, high, low, volume FROM %s ORDER BY time DESC LIMIT ?
 	) ORDER BY time ASC;`, tableName)
@@ -117,6 +120,7 @@ func GetAllCandle(symbol string, limit int) (dfCandle *DataFrameCandle, err erro
 	}
 	err = rows.Err()
 	if err != nil{
+		log.Fatalln("Failed to get data")
 		return 
 	}
 

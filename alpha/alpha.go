@@ -32,12 +32,13 @@ func (api *APIClient) doRequest(method, urlPath string, query map[string]string,
 		return 
 	}
 
+	urlValues := url.Values{}
+	for key, val := range query{
+		urlValues.Add(key, val)
+	}
+	
 	if len(query) > 0{
-		urlPath += "query?"
-		for key, val := range query{
-			urlPath += key + "=" + val + "&"
-		}
-		urlPath = urlPath[:len(urlPath) - 1]
+		urlPath = urlPath + "query?" + urlValues.Encode()
 	}
 
 	apiURL, err := url.Parse(urlPath)
