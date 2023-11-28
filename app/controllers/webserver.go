@@ -12,7 +12,7 @@ import (
 	"strconv"
 )
 
-var templates = template.Must(template.ParseFiles("app/views/google.html"))
+var templates = template.Must(template.ParseFiles("app/views/google.jinja"))
 
 func viewCharHandler(w http.ResponseWriter, r *http.Request){
 	limit := 100
@@ -20,13 +20,14 @@ func viewCharHandler(w http.ResponseWriter, r *http.Request){
 
 	fmt.Printf("Dataframe is %v\n", df)
 
-	err := templates.ExecuteTemplate(w, "google.html", df.Candles)
+	err := templates.ExecuteTemplate(w, "google.jinja", df.Candles)
 	if err != nil{
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
 
 
+// 以下はキャンドルデータを非同期処理(AJAX)で取ってくるためにJsonにデータフォーマットに変換した上でAJAXがAPIを取りに行かせる
 
 type JSONError struct{
 	Error string `json:"error"`
@@ -87,7 +88,7 @@ func apiCandleHandler(w http.ResponseWriter, r *http.Request){
 
 
 func StartWebServer() error {
-	// http.HandleFunc("/api/candle/", apiCandleHandler)
+	http.HandleFunc("/api/candle/", apiMakeHandler(apiCandleHandler))
 	http.HandleFunc("/chart/", viewCharHandler)
 	return http.ListenAndServe(fmt.Sprintf(":%d", config.Config.Port), nil)
 }

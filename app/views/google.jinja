@@ -13,7 +13,11 @@
     ], true);
 
     var options = {
-      legend:'none'
+      legend:'none',
+      candlestick: {
+        fallingClolor: { strokeWidth: 0, fill: '#a52714' },
+        risingColor: { strokeWidth: 0, fill: '#0f9d58' }
+      }
     };
 
     var chart = new google.visualization.CandlestickChart(document.getElementById('chart_div'));
