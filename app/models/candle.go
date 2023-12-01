@@ -11,13 +11,13 @@ import (
 
 
 type Candle struct{
-	Symbol string
-	DateTime time.Time
-	Open float64
-	Close float64
-	High float64
-	Low float64
-	Volume float64
+	Symbol 		string 			`json:"symbol"`
+	DateTime 	time.Time 		`json:"date_time"`
+	Open 		float64 		`json:"open"`
+	Close 		float64 		`json:"close"`
+	High		float64 		`json:"high"`
+	Low 		float64 		`json:"low"`
+	Volume 		float64 		`json:"volume"`
 }
 
 

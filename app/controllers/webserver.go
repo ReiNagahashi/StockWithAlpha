@@ -12,15 +12,10 @@ import (
 	"strconv"
 )
 
-var templates = template.Must(template.ParseFiles("app/views/google.jinja"))
+var templates = template.Must(template.ParseFiles("app/views/chart.jinja"))
 
-func viewCharHandler(w http.ResponseWriter, r *http.Request){
-	limit := 100
-	df, _ := models.GetAllCandle(config.Config.Symbol, limit)
-
-	fmt.Printf("Dataframe is %v\n", df)
-
-	err := templates.ExecuteTemplate(w, "google.jinja", df.Candles)
+func viewChartHandler(w http.ResponseWriter, r *http.Request){
+	err := templates.ExecuteTemplate(w, "chart.jinja", nil)
 	if err != nil{
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
@@ -89,7 +84,7 @@ func apiCandleHandler(w http.ResponseWriter, r *http.Request){
 
 func StartWebServer() error {
 	http.HandleFunc("/api/candle/", apiMakeHandler(apiCandleHandler))
-	http.HandleFunc("/chart/", viewCharHandler)
+	http.HandleFunc("/chart/", viewChartHandler)
 	return http.ListenAndServe(fmt.Sprintf(":%d", config.Config.Port), nil)
 }
 
