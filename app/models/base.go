@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"stock-with-alpha/config"
+	"time"
+
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -15,8 +17,8 @@ const (
 var DbConnection *sql.DB
 
 
-func GetCandleTableName(symbol string) string{
-	return fmt.Sprintf("%s_%s", symbol, "date")
+func GetCandleTableName(symbol string, duration time.Duration) string{
+	return fmt.Sprintf("%s_%s", symbol, duration)
 }
 
 
@@ -35,18 +37,29 @@ func init(){
 		price FLOAT,
 		size FLOAT
 	)`, tableNameSignalEvents)
-	DbConnection.Exec(cmd)
+	_, err = DbConnection.Exec(cmd)
+	if err != nil{
+		log.Fatalln(err)
+	}
 	
-	// 日毎のキャンドルデータのテーブル
-	tableName := GetCandleTableName(config.Config.Symbol)
-	c := fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s (
-		time DATETIME PRIMARY KEY NOT NULL,
-		open FLOAT,
-		close FLOAT,
-		high FLOAT,
-		low FLOAT,
-		volume FLOAT
-	)`, tableName)
-	DbConnection.Exec(c)
+	// キャンドルデータのテーブル
+	for _, duration := range config.Config.Durations{
+		tableName := GetCandleTableName(config.Config.Symbol, duration)
+
+		c := fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s (
+			time DATETIME PRIMARY KEY NOT NULL,
+			open FLOAT,
+			close FLOAT,
+			high FLOAT,
+			low FLOAT,
+			volume FLOAT
+		)`, tableName)
+		_, err = DbConnection.Exec(c)
+		if err != nil{
+			log.Fatalln(err)
+		}
+	}
+	
+
 
 }

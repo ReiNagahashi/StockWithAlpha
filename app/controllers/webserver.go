@@ -69,8 +69,38 @@ func apiCandleHandler(w http.ResponseWriter, r *http.Request){
 	if strLimit == "" || err != nil || limit < 0 || limit > 1000{
 		limit = 1000
 	}
+	duration := r.URL.Query().Get("duration")
+	if duration == ""{
+		duration = "day"
+	}
+	durationTime := config.Config.Durations[duration]
+	df, _ := models.GetAllCandle(symbol, durationTime, limit)
 
-	df, _ := models.GetAllCandle(symbol, limit)
+	sma := r.URL.Query().Get("sma")
+	if sma != ""{
+		strSmaPeriod1 := r.URL.Query().Get("smaPeriod1")
+		strSmaPeriod2 := r.URL.Query().Get("smaPeriod2")
+		strSmaPeriod3 := r.URL.Query().Get("smaPeriod3")
+
+		period1, err := strconv.Atoi(strSmaPeriod1)
+		if strSmaPeriod1 == "" || err != nil || period1 < 0{
+			period1 = 7
+		}
+
+		period2, err := strconv.Atoi(strSmaPeriod2)
+		if strSmaPeriod2 == "" || err != nil || period2 < 0{
+			period2 = 14
+		}
+
+		period3, err := strconv.Atoi(strSmaPeriod3)
+		if strSmaPeriod3 == "" || err != nil || period3 < 0{
+			period3 = 50
+		}
+		df.AddSma(period1)
+		df.AddSma(period2)
+		df.AddSma(period3)
+
+	}
 
 	js, err := json.Marshal(df)
 	if err != nil{

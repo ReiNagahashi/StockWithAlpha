@@ -4,7 +4,6 @@ import (
 	"log"
 	"os"
 	"time"
-
 	"gopkg.in/ini.v1"
 )
 
@@ -12,14 +11,19 @@ type ConfigList struct{
 	ApiKey 			string
 	LogFile 		string
 	Symbol 			string
-	Duration 		string
+	Durations 		map[string]time.Duration
 	DbName 			string
 	SQLDriver 		string
 	Port 			int
 }
 
 
-var Config ConfigList
+var(
+	Config ConfigList
+	hour = time.Duration(time.Hour)
+	Day = hour * 24
+	Week = Day * 7
+)
 
 
 func init(){
@@ -29,11 +33,17 @@ func init(){
 		os.Exit(1)
 	}
 
+
+	durations := map[string]time.Duration{
+		"day": Day,
+		"week": Week,
+	}
+
 	Config = ConfigList{
 		ApiKey: cfg.Section("alpha_vantage").Key("api_key").String(),
 		LogFile: cfg.Section("stockWithAlpha").Key("log_file").String(),
 		Symbol: cfg.Section("stockWithAlpha").Key("symbol").String(),
-		Duration: time.DateTime,
+		Durations: durations,
 		DbName: cfg.Section("db").Key("name").String(),
 		SQLDriver: cfg.Section("db").Key("driver").String(),
 		Port: cfg.Section("web").Key("port").MustInt(),

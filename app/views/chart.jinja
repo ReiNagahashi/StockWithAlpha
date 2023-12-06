@@ -28,10 +28,28 @@
                 },
                 candlestick:{
                     symbol: 'IBM',
+                    duration: '',
                     limit: 365,
+                    //カラム数はデフォルトで５としておく。そこに付け足していく感じ
                     numViews: 5,
                 },
+                dataTable: {
+                    index: 0,
+                    value: null
+                },
+                sma: {
+                    enable: false,
+                    indices: [],
+                    periods: [],
+                    values: []
+                },
             };
+            //sendでデータを取ってきて再描画するために各パラメータを初期化する
+            function initConfigValues(){
+                config.dataTable.index = 0;
+                config.sma.indices = [];
+                config.sma.values = [];
+            }
 
             function drawChart(dataTable){
                 var chartDiv = document.getElementById('chart_div');
@@ -85,7 +103,7 @@
                 dashboard.bind(controlWrapper, charts);
                 dashboard.draw(dataTable)
             }
-
+            //データを取ってきて描画 
             function send(){
                 // enableがfalseの場合はAJAXがデータを取ってこないようにする
                 if(!config.api.enable) return
@@ -93,8 +111,18 @@
                 var params = {
                     "symbol": config.candlestick.symbol,
                     "limit": config.candlestick.limit,
+                    "duration": config.candlestick.duration,
                 }
+
+                if(config.sma.enable){
+                    params["sma"] = true;
+                    params["smaPeriod1"] = config.sma.periods[0];
+                    params["smaPeriod2"] = config.sma.periods[1];
+                    params["smaPeriod3"] = config.sma.periods[2];
+                }
+
                 $.get("/api/candle/", params).done(function(data){
+                    initConfigValues();
                     var dataTable = new google.visualization.DataTable();
                     dataTable.addColumn('date', 'Date');
                     dataTable.addColumn('number', 'Low');
@@ -118,7 +146,12 @@
                 })
             }
 
-            setInterval(send, 1000*3)
+            function changeDuration(s){
+                config.candlestick.duration = s;
+                send();
+            }
+
+            //setInterval(send, 1000*3)
             window.onload = function (){
                 send()
                 //カーソルがチャート上に乗った場合にenableがfalseになる
@@ -129,12 +162,39 @@
                 });
             
             }
-            
-            
+
+            // smaに関するjquery
+            $('#inputSma').change(function() {
+                config.sma.enable = (this.checked);
+                send();
+            });
+
+            $("#inputSmaPeriod1").change(function() {
+                config.sma.periods[0] = this.value;
+                send();
+            })
+            $("#inputSmaPeriod2").change(function() {
+                config.sma.periods[1] = this.value;
+                send();
+            })
+            $("#inputSmaPeriod3").change(function() {
+                config.sma.periods[2] = this.value;
+                send();
+            })
 
         </script>
     </head>
     <body>
+        <div>
+            <button onclick="changeDuration('day');">Day</button>
+            <button onclick="changeDuration('week');">Week</button>
+        </div>
+        <div>
+            SMA <input type="checkbox" id="inputSma">
+            Period <input type="text" id="inputSmaPeriod1" value="7" style="width: 15px;">
+            <input type="text" id="inputSmaPeriod2" value="14" style="width: 15px;">
+            <input type="text" id="inputSmaPeriod3" value="50" style="width: 15px;">
+        </div>
         <div id="dashboard_div">
             <div id="chart_div"></div>
             <div id="filter_div"></div>

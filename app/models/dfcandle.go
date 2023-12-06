@@ -1,13 +1,26 @@
 package models
 
-import "time"
+import (
+	"time"
+
+	"github.com/markcheno/go-talib"
+)
 
 // dfの存在意義：全ての各キャンドルの特定の項目だけを取り出してリストとして扱える
 
 type DataFrameCandle struct{
-	Symbol string `json:"symbol"`
-	Candles []Candle `json:"candles"`
+	Symbol 	 string 		`json:"symbol"`
+	Candles  []Candle 		`json:"candles"`
+	Duration time.Duration 	`json:"duration"`
+	Smas 	 []Sma 			`json:"smas,omitempty"`
 }
+
+
+type Sma struct{
+	Period int `json:"period,omitempty"`
+	Values []float64 `json:"values,omitempty"`
+}
+
 
 // 各キャンドルの日にちを取得
 func (df *DataFrameCandle) DateTimes() []time.Time {
@@ -73,4 +86,18 @@ func (df *DataFrameCandle) Volumes() []float64{
 	}
 
 	return s
+}
+
+
+func (df *DataFrameCandle) AddSma(period int) bool {
+	if len(df.Candles) > period{
+		df.Smas = append(df.Smas, Sma {
+			Period: period,
+			Values: talib.Sma(df.Closes(), period),
+		})
+
+		return true
+	}
+	
+	return false
 }

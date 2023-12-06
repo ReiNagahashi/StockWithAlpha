@@ -11,4 +11,3 @@ func main(){
 	controllers.StreamIngestionData()
 	controllers.StartWebServer()
 }
-
