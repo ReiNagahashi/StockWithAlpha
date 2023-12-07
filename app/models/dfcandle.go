@@ -2,7 +2,6 @@ package models
 
 import (
 	"time"
-
 	"github.com/markcheno/go-talib"
 )
 
@@ -13,10 +12,16 @@ type DataFrameCandle struct{
 	Candles  []Candle 		`json:"candles"`
 	Duration time.Duration 	`json:"duration"`
 	Smas 	 []Sma 			`json:"smas,omitempty"`
+	Emas 	 []Ema 			`json:"emas,omitempty"`
 }
 
 
 type Sma struct{
+	Period int `json:"period,omitempty"`
+	Values []float64 `json:"values,omitempty"`
+}
+
+type Ema struct {
 	Period int `json:"period,omitempty"`
 	Values []float64 `json:"values,omitempty"`
 }
@@ -99,5 +104,17 @@ func (df *DataFrameCandle) AddSma(period int) bool {
 		return true
 	}
 	
+	return false
+}
+
+
+func (df *DataFrameCandle) AddEma(period int) bool{
+	if len(df.Candles) > period{
+		df.Emas = append(df.Emas, Ema{
+			Period: period,
+			Values: talib.Ema(df.Closes(), period),
+		})
+		return true
+	}
 	return false
 }

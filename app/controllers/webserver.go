@@ -96,9 +96,41 @@ func apiCandleHandler(w http.ResponseWriter, r *http.Request){
 		if strSmaPeriod3 == "" || err != nil || period3 < 0{
 			period3 = 50
 		}
+
 		df.AddSma(period1)
 		df.AddSma(period2)
 		df.AddSma(period3)
+
+	}
+
+
+
+
+
+	if r.URL.Query().Get("ema") != ""{
+		emaValuePeriod1 := r.URL.Query().Get("emaPeriod1")
+		emaValuePeriod2 := r.URL.Query().Get("emaPeriod2")
+		emaValuePeriod3 := r.URL.Query().Get("emaPeriod3")
+
+
+		period1, err := strconv.Atoi(emaValuePeriod1)
+		if emaValuePeriod1 == "" || err != nil || period1 < 0{
+			period1 = 7
+		}
+
+		period2, err := strconv.Atoi(emaValuePeriod2)
+		if emaValuePeriod2 == "" || err != nil || period2 < 0{
+			period2 = 14
+		}
+
+		period3, err := strconv.Atoi(emaValuePeriod3)
+		if emaValuePeriod3 == "" || err != nil || period3 < 0{
+			period3 = 50
+		}
+
+		df.AddEma(period1)
+		df.AddEma(period2)
+		df.AddEma(period3)
 
 	}
 
@@ -110,6 +142,8 @@ func apiCandleHandler(w http.ResponseWriter, r *http.Request){
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(js)
 }
+
+
 
 
 func StartWebServer() error {
