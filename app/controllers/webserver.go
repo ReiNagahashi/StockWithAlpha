@@ -103,10 +103,6 @@ func apiCandleHandler(w http.ResponseWriter, r *http.Request){
 
 	}
 
-
-
-
-
 	if r.URL.Query().Get("ema") != ""{
 		emaValuePeriod1 := r.URL.Query().Get("emaPeriod1")
 		emaValuePeriod2 := r.URL.Query().Get("emaPeriod2")
@@ -133,6 +129,22 @@ func apiCandleHandler(w http.ResponseWriter, r *http.Request){
 		df.AddEma(period3)
 
 	}
+	if r.URL.Query().Get("bbands") != ""{
+		strN := r.URL.Query().Get("bbandsN")
+		strK := r.URL.Query().Get("bbandsK")
+
+		N,err := strconv.Atoi(strN)
+		if strN == "" || err != nil || N < 0{
+			N = 20
+		}
+
+		K, err := strconv.Atoi(strK)
+		if strK == "" || err != nil || K < 0{
+			K = 2
+		}
+
+		df.AddBBands(N, float64(K))
+	}
 
 	js, err := json.Marshal(df)
 	if err != nil{
@@ -142,7 +154,6 @@ func apiCandleHandler(w http.ResponseWriter, r *http.Request){
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(js)
 }
-
 
 
 

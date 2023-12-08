@@ -6,13 +6,14 @@ import (
 )
 
 // dfの存在意義：全ての各キャンドルの特定の項目だけを取り出してリストとして扱える
-
 type DataFrameCandle struct{
 	Symbol 	 string 		`json:"symbol"`
 	Candles  []Candle 		`json:"candles"`
 	Duration time.Duration 	`json:"duration"`
 	Smas 	 []Sma 			`json:"smas,omitempty"`
 	Emas 	 []Ema 			`json:"emas,omitempty"`
+	// BBandsがポインタの理由：smas,emasはラインの数が必ずしも固定しなくても良い。一方でBBandsは3つのラインに固定する
+	BBands 	 *BBands 		`json:"bbands,omitempty"`
 }
 
 
@@ -26,6 +27,18 @@ type Ema struct {
 	Values []float64 `json:"values,omitempty"`
 }
 
+
+type BBands struct{
+	// 移動平均線
+	N 		int 		`json:"n,omitempty"`
+	// Kは標準偏差の倍数を示しており、通常は2が使われます。
+	// Kが大きくなると標準偏差の倍数も大きくなり、バンドの幅が広がります
+	K 		float64 	`json:"k,omitempty"`
+	// 各ラインをそれぞれスライスで表現する
+	Up 		[]float64 	`json:"up,omitempty"`
+	Mid 	[]float64 	`json:"mid,omitempty"`
+	Down 	[]float64 	`json:"down,omitempty"`
+}
 
 // 各キャンドルの日にちを取得
 func (df *DataFrameCandle) DateTimes() []time.Time {
@@ -114,6 +127,24 @@ func (df *DataFrameCandle) AddEma(period int) bool{
 			Period: period,
 			Values: talib.Ema(df.Closes(), period),
 		})
+		return true
+	}
+	return false
+}
+
+func (df *DataFrameCandle) AddBBands(n int, k float64) bool{
+	if n <= len(df.Closes()){
+		// talibのbbandsメソッドの一番最後は移動平均線のタイプを選ぶ→今回は普通を選択
+		up, mid, down := talib.BBands(df.Closes(), n, k, k, 0)
+	
+		df.BBands = &BBands{
+			N:n,
+			K:k,
+			Up: up,
+			Mid: mid,
+			Down: down,
+		}
+
 		return true
 	}
 	return false
