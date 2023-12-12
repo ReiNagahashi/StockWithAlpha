@@ -146,6 +146,17 @@ func apiCandleHandler(w http.ResponseWriter, r *http.Request){
 		df.AddBBands(N, float64(K))
 	}
 
+	if r.URL.Query().Get("rsi") != ""{
+		periodStr := r.URL.Query().Get("rsiPeriod")
+		period,err := strconv.Atoi(periodStr)
+
+		if periodStr == "" || err != nil || period < 0{
+			period = 14
+		}
+
+		df.AddRsi(period)
+	}
+
 	js, err := json.Marshal(df)
 	if err != nil{
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -154,8 +165,6 @@ func apiCandleHandler(w http.ResponseWriter, r *http.Request){
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(js)
 }
-
-
 
 func StartWebServer() error {
 	http.HandleFunc("/api/candle/", apiMakeHandler(apiCandleHandler))

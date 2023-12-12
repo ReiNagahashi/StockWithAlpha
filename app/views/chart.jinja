@@ -70,6 +70,14 @@
                     index: [],
                     values: []
                 },
+                rsi: {
+                    enable: false,
+                    indices: {'up': 0, 'value': 0, 'down': 0},
+                    period: 14,
+                    up: 70,
+                    values: [],
+                    down: 30
+                }
             };
             //sendでデータを取ってきて再描画するために各パラメータを初期化する
             function initConfigValues(){
@@ -83,6 +91,7 @@
                 config.bbands.mid = [];
                 config.bbands.down = [];
                 config.volume.index = [];
+                config.rsi.indices = [];
             }
 
             function drawChart(dataTable){
@@ -170,6 +179,37 @@
                     charts.push(volumeChart);
                 }
 
+                if(config.rsi.enable){
+                    if ($('#rsi_div').length == 0) {
+                        $('#technical_div').append(
+                                "<div id='rsi_div' class='bottom_chart'>" +
+                                "<span class='technical_title'>RSI</span>" +
+                                "<div id='rsi_chart'></div>" +
+                                "</div>")
+                    }
+                    var up = config.candlestick.numViews + config.rsi.indices['up'];
+                    var value = config.candlestick.numViews + config.rsi.indices['value'];
+                    var down = config.candlestick.numViews + config.rsi.indices['down'];
+
+                    var rsiChart = new google.visualization.ChartWrapper({
+                        'chartType': 'LineChart',
+                        'containerId': 'rsi_chart',
+                        'options': {
+                            'hAxix': {'slantedText': false},
+                            'legend': {'position': 'none'},
+                            'series': {
+                                0: {color: 'black', lineWidth: 1},
+                                1: {color: '#e2431e'},
+                                2: {color: 'black', lineWidth: 1}
+                            }
+                        },
+                        'view': {
+                            'columns': [ { 'type': 'string' }, up, value, down]
+                        }
+                    });
+                    charts.push(rsiChart);
+                }
+
                 var controlWrapper = new google.visualization.ControlWrapper({
                     'controlType': 'ChartRangeFilter',
                     'containerId': 'filter_div',
@@ -218,6 +258,11 @@
                     params["bbandsN"] = config.bbands.n;
                     params["bbandsK"] = config.bbands.k;
                 }
+                if(config.rsi.enable){
+
+                    params["rsi"] = true;
+                    params["rsiPeriod"] = config.rsi.period;
+                }
 
                 $.get("/api/candle/", params).done(function(data){
                     initConfigValues();
@@ -228,7 +273,7 @@
                     dataTable.addColumn('number', 'Close');
                     dataTable.addColumn('number', 'High');
                     dataTable.addColumn('number', 'Volume');
-                    //データテーブルに値を書き込んでいく
+                    //データテーブルに値を書き込んでいく dataは構造体のjson用記述のところを参照している
                     if(data["smas"] != undefined){
                         for(i = 0; i < data["smas"].length; i++){
                             var smaData = data["smas"][i];
@@ -270,10 +315,24 @@
                         dataTable.addColumn('number', 'BBands Up(' + n + ', ' + k + ')');
                         dataTable.addColumn('number', 'BBands Mid(' + n + ', ' + k + ')');
                         dataTable.addColumn('number', 'BBands Down(' + n + ', ' + k + ')');
-
+                        
                         config.bbands.up = up;
                         config.bbands.mid = mid;
                         config.bbands.down = down;
+                    }
+
+                    if(data["rsi"] != undefined){
+                        config.dataTable.index++;
+                        config.rsi.indices['up'] = config.dataTable.index;
+                        config.dataTable.index++;
+                        config.rsi.indices['value'] = config.dataTable.index;
+                        config.dataTable.index++;
+                        config.rsi.indices['down'] = config.dataTable.index;
+                        config.rsi.period = data['rsi']['period']
+                        config.rsi.values = data['rsi']['values']
+                        dataTable.addColumn('number', 'RSI Thread');
+                        dataTable.addColumn('number', 'RSI(' + config.rsi.period + ')');
+                        dataTable.addColumn('number', 'RSI Thread');
                     }
 
                     var googleChartData = [];
@@ -282,8 +341,13 @@
                     for(var i = 0; i < candles.length; i++){
                         var candle = candles[i];
                         var date = new Date(candle.date_time);
+                        //🚨dataはバックエンドに登録してある各フィールド名
+                        //一方でdatasはチャートで表示させ用としている各データを持つリスト。
+                        //これをdataTable.indexの値をもつconfigの各フィールドのindicesに格納している. 
                         var datas = [date, candle.low, candle.open, candle.close, candle.high, candle.volume];
 
+                        //以下の各フィールドはenableがtrueになったときにdatasに各フィールドをプッシュする
+                        //その上で、そのプッシュされた各フィールドを描画するためにdataTable.indexを参照している
                         if(data["smas"] != undefined){
                             for(j = 0; j < config.sma.values.length; j++){
                                 if(config.sma.values[j][i] == 0){
@@ -321,10 +385,21 @@
                                 datas.push(config.bbands.down[i]);
                             }
                         }
+                        if(data['rsi'] != undefined){
+                            datas.push(config.rsi.up);
+                            if(config.rsi.values[i] == 0){
+                                datas.push(null);
+                            }else{
+                                datas.push(config.rsi.values[i]);
+                            }
+                            datas.push(config.rsi.down);
+                        }
                         googleChartData.push(datas);
+
                     }
+
                     dataTable.addRows(googleChartData);
-                    drawChart(dataTable)
+                    drawChart(dataTable);
                 })
             }
 
@@ -400,13 +475,26 @@
                     if(this.checked){
                         config.volume.enable = true;
                         send();
-                        drawChart(config.dataTable.value);
                     }
                     else{
                         config.volume.enable = false;
                         $('#volume_div').remove();
                     }
                 })
+                $("#inputRsi").change(function() {
+                    if(this.checked){
+                        config.rsi.enable = true;
+                        send();
+                    }else{
+                        config.rsi.enable = false;
+                        $("#rsi_div").remove();
+                    }
+
+                });
+                $("#inputRsiPeriod").change(function(){
+                    config.rsi.period = this.value;
+                    send();
+                });
             }
         </script>
     </head>
@@ -434,6 +522,10 @@
         </div>
         <div>
             <input type="checkbox" id="inputVolume">
+        </div>
+        <div>
+            Rsi <input type="checkbox" id="inputRsi">
+            Period <input type="text" id="inputRsiPeriod" value="14" style="width: 15px;">
         </div>
         <div id="dashboard_div">
             <div id="chart_div"></div>

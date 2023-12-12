@@ -14,6 +14,7 @@ type DataFrameCandle struct{
 	Emas 	 []Ema 			`json:"emas,omitempty"`
 	// BBandsがポインタの理由：smas,emasはラインの数が必ずしも固定しなくても良い。一方でBBandsは3つのラインに固定する
 	BBands 	 *BBands 		`json:"bbands,omitempty"`
+	Rsi 	 *Rsi 			`json:"rsi,omitempty"`
 }
 
 
@@ -38,6 +39,12 @@ type BBands struct{
 	Up 		[]float64 	`json:"up,omitempty"`
 	Mid 	[]float64 	`json:"mid,omitempty"`
 	Down 	[]float64 	`json:"down,omitempty"`
+}
+
+
+type Rsi struct {
+	Period int `json:"period,omitempty"`
+	Values []float64 `json:"values,omitempty"`
 }
 
 // 各キャンドルの日にちを取得
@@ -145,6 +152,18 @@ func (df *DataFrameCandle) AddBBands(n int, k float64) bool{
 			Down: down,
 		}
 
+		return true
+	}
+	return false
+}
+
+func (df *DataFrameCandle) AddRsi(period int) bool{
+	if len(df.Candles) > period{
+		values := talib.Rsi(df.Closes(), period)
+		df.Rsi = &Rsi{
+			Period: period,
+			Values: values,
+		}
 		return true
 	}
 	return false
