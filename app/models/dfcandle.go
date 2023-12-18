@@ -5,7 +5,8 @@ import (
 	"github.com/markcheno/go-talib"
 )
 
-// dfの存在意義：全ての各キャンドルの特定の項目だけを取り出してリストとして扱える
+// dfの存在意義：①全ての各キャンドルの特定の項目だけを取り出してリストとして扱える
+// ②UIとやり取りをするデータはここで管理する
 type DataFrameCandle struct{
 	Symbol 	 string 		`json:"symbol"`
 	Candles  []Candle 		`json:"candles"`
@@ -15,6 +16,7 @@ type DataFrameCandle struct{
 	// BBandsがポインタの理由：smas,emasはラインの数が必ずしも固定しなくても良い。一方でBBandsは3つのラインに固定する
 	BBands 	 *BBands 		`json:"bbands,omitempty"`
 	Rsi 	 *Rsi 			`json:"rsi,omitempty"`
+	Events 	 *SignalEvents  `json:"events,omitempty"`
 }
 
 
@@ -166,5 +168,15 @@ func (df *DataFrameCandle) AddRsi(period int) bool{
 		}
 		return true
 	}
+	return false
+}
+
+func (df *DataFrameCandle) AddEvents(period time.Time) bool {
+	signalEvents := GetSignalEventsAfterTime(period)
+	if len(signalEvents.Signals) > 0{
+		df.Events = signalEvents
+		return true
+	}
+	
 	return false
 }

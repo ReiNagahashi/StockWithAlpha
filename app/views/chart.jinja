@@ -29,10 +29,11 @@
         <script type="text/javascript">
             google.charts.load('current', {'packages':['corechart', 'controls']});
             var config = {
-                api:{
-                    enable: true,
-                    interval: 1000*3
-                },
+                // Ajaxを使ってリアルタイムにページを更新したいときに使用
+                //api:{
+                 //   enable: true,
+                 //  interval: 1000*3
+              //  },
                 candlestick:{
                     symbol: 'IBM',
                     duration: '',
@@ -77,6 +78,12 @@
                     up: 70,
                     values: [],
                     down: 30
+                },
+                events: {
+                    enable: false,
+                    indices: [],
+                    values: [],
+                    first: null
                 }
             };
             //sendでデータを取ってきて再描画するために各パラメータを初期化する
@@ -92,6 +99,8 @@
                 config.bbands.down = [];
                 config.volume.index = [];
                 config.rsi.indices = [];
+                config.events.indices = [];
+                config.events.values = [];
             }
 
             function drawChart(dataTable){
@@ -155,6 +164,17 @@
                     }
                 }
 
+            if (config.events.enable == true && config.events.indices.length > 0){
+                options.series[config.events.indices[0]] = {
+                    'type': 'line',
+                    tooltip: 'none',
+                    enableInteractivity: false,
+                    lineWidth: 0
+                };
+                view.columns.push(config.candlestick.numViews + config.events.indices[0]);
+                view.columns.push(config.candlestick.numViews + config.events.indices[1]);
+            }
+
                 if(config.volume.enable){
                     if ($('#volume_div').length == 0) {
                         $('#technical_div').append(
@@ -210,6 +230,7 @@
                     charts.push(rsiChart);
                 }
 
+
                 var controlWrapper = new google.visualization.ControlWrapper({
                     'controlType': 'ChartRangeFilter',
                     'containerId': 'filter_div',
@@ -230,7 +251,7 @@
             //データを取ってきて描画 
             function send(){
                 // enableがfalseの場合はAJAXがデータを取ってこないようにする
-                if(!config.api.enable) return
+                //if(!config.api.enable) return
                 //以下で辞書paramsに任意のフィールドを設定してあげる
                 //→そのフィールドをもとにバックエンドがrequestポインタを通じてデータを取ってくる
                 var params = {
@@ -263,7 +284,9 @@
                     params["rsi"] = true;
                     params["rsiPeriod"] = config.rsi.period;
                 }
-
+                if(config.events.enable){
+                    params["events"] = true;
+                }
                 $.get("/api/candle/", params).done(function(data){
                     initConfigValues();
                     var dataTable = new google.visualization.DataTable();
@@ -277,7 +300,6 @@
                     if(data["smas"] != undefined){
                         for(i = 0; i < data["smas"].length; i++){
                             var smaData = data["smas"][i];
-
                             if(smaData.length == 0) continue;
                             //sma用に新たにチャートに表示させるためのインデックスを用意するために、indexをインクリメント
                             config.dataTable.index++;
@@ -335,6 +357,23 @@
                         dataTable.addColumn('number', 'RSI Thread');
                     }
 
+                    if(data["events"] != undefined){
+                        config.dataTable.index++;
+                        config.events.indices[0] = config.dataTable.index;
+                        config.dataTable.index++;
+                        config.events.indices[1] = config.dataTable.index;
+                        config.events.values = data["events"]["signals"];
+                        config.events.first = config.events.values.shift();
+                        
+                        dataTable.addColumn('number', 'Marker');
+                        dataTable.addColumn({type:'string', role:'annotation'});
+
+                        if (data['events']['profit'] != undefined) {
+                            profit = "$" + String(Math.round(data['events']['profit'] * 100) / 100);
+                            $('#profit').html("Change:" + profit);
+                        }
+                    }
+
                     var googleChartData = [];
                     var candles = data["candles"];
 
@@ -349,7 +388,7 @@
                         //以下の各フィールドはenableがtrueになったときにdatasに各フィールドをプッシュする
                         //その上で、そのプッシュされた各フィールドを描画するためにdataTable.indexを参照している
                         if(data["smas"] != undefined){
-                            for(j = 0; j < config.sma.values.length; j++){
+                            for(var j = 0; j < config.sma.values.length; j++){
                                 if(config.sma.values[j][i] == 0){
                                     datas.push(null);
                                 }else{
@@ -394,6 +433,22 @@
                             }
                             datas.push(config.rsi.down);
                         }
+
+                        if(data['events'] != undefined){
+                            var event = config.events.first;
+                            if(event == undefined){
+                                datas.push(null);
+                                datas.push(null);
+                            } else if(event.time == candle.date_time){
+                                // candle.high + 1　とすることで、SELL, BUYのシンボルがキャンドルの少し上で表示させられる
+                                datas.push(candle.high + 1);
+                                datas.push(event.side);
+                                config.events.first = config.events.values.shift();
+                            }else{
+                                datas.push(null);
+                                datas.push(null);
+                            }
+                        }
                         googleChartData.push(datas);
 
                     }
@@ -412,11 +467,11 @@
             window.onload = function (){
                 send()
                 //カーソルがチャート上に乗った場合にenableがfalseになる
-                $('#dashboard_div').mouseenter(function() {
-                    config.api.enable = false;
-                }).mouseleave(function(){
-                    config.api.enable = true;
-                });
+                //$('#dashboard_div').mouseenter(function() {
+                    //config.api.enable = false;
+                //}).mouseleave(function(){
+                    //config.api.enable = true;
+                //});
 
                 // Smaに関するjquery
                 $('#inputSma').change(function() {
@@ -495,6 +550,21 @@
                     config.rsi.period = this.value;
                     send();
                 });
+
+                $("#inputEvents").change(function() {
+                    if(this.checked){
+                        config.events.enable = true;
+                        send();
+                    }else{
+                        config.events.enable = false;
+                        $("#events_div").remove();
+                    }
+
+                });
+                $("#inputEventsPeriod").change(function(){
+                    config.events.period = this.value;
+                    send();
+                });
             }
         </script>
     </head>
@@ -521,16 +591,21 @@
             K <input type="text" id="inputBBandsK" value="2" style="...">
         </div>
         <div>
-            <input type="checkbox" id="inputVolume">
+            Volume <input type="checkbox" id="inputVolume">
         </div>
         <div>
             Rsi <input type="checkbox" id="inputRsi">
             Period <input type="text" id="inputRsiPeriod" value="14" style="width: 15px;">
         </div>
+        <div>
+            Events <input type="checkbox" id="inputEvents"> <div id="profit"></div>
+        </div>
         <div id="dashboard_div">
             <div id="chart_div"></div>
             <div id="technical_div"></div>
             <div id="filter_div"></div>
+            <div id="events_div"></div>
+            
         </div>
         
     </body>
