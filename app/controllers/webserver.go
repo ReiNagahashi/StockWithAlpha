@@ -158,8 +158,15 @@ func apiCandleHandler(w http.ResponseWriter, r *http.Request){
 	}
 
 	if r.URL.Query().Get("events") != ""{
-		firstTime := df.Candles[0].DateTime
-		df.AddEvents(firstTime)
+		if config.Config.BackTest{
+			performance, period1, period2 := df.OptimizeEma()
+			if performance > 0{
+				df.Events = df.BacktestEma(period1, period2)
+			}
+		}else{
+			firstTime := df.Candles[0].DateTime
+			df.AddEvents(firstTime)
+		}
 	}
 
 	js, err := json.Marshal(df)

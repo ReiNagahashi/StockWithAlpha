@@ -193,7 +193,7 @@ func (s *SignalEvents) Profit() float64{
 }
 
 // Sell, Buy関数によって得られたプロフィットをsignalEevnts構造体に新たなフィールドとして加える
-func (s SignalEvents) MarshallJSON() ([] byte, error){
+func (s SignalEvents) MarshalJSON() ([] byte, error){
 	value, err := json.Marshal(&struct{
 		Signals []SignalEvent `json:"signals,omitempty"`
 		Profit float64 `json:"profit,omitempty"`
@@ -212,8 +212,6 @@ func (s SignalEvents) MarshallJSON() ([] byte, error){
 func (s *SignalEvents) CollectAfter(time time.Time) *SignalEvents{
 	fmt.Println(s.Signals)
 	for i, signal := range s.Signals{
-		fmt.Println(signal)
-		fmt.Println(time.After(signal.Time))
 
 		if time.After(signal.Time){
 			continue

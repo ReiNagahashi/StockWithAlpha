@@ -8,13 +8,19 @@ import (
 )
 
 type ConfigList struct{
-	ApiKey 			string
-	LogFile 		string
-	Symbol 			string
-	Durations 		map[string]time.Duration
-	DbName 			string
-	SQLDriver 		string
-	Port 			int
+	ApiKey 				string
+	LogFile 			string
+	Symbol 				string
+	Durations 			map[string]time.Duration
+	DbName 				string
+	SQLDriver 			string
+	Port 				int
+
+	BackTest 			bool
+	UsePercent 			float64
+	DataLimit 			int
+	StopLimitPercent 	float64
+	NumRanking 			int
 }
 
 
@@ -47,6 +53,10 @@ func init(){
 		DbName: cfg.Section("db").Key("name").String(),
 		SQLDriver: cfg.Section("db").Key("driver").String(),
 		Port: cfg.Section("web").Key("port").MustInt(),
-
+		BackTest: cfg.Section("stockWithAlpha").Key("back_test").MustBool(),
+		UsePercent: cfg.Section("stockWithAlpha").Key("use_percent").MustFloat64(),
+		DataLimit: cfg.Section("stockWithAlpha").Key("data_limit").MustInt(),
+		StopLimitPercent: cfg.Section("stockWithAlpha").Key("stop_limit_percent").MustFloat64(),
+		NumRanking: cfg.Section("stockWithAlpha").Key("num_ranking").MustInt(),
 	}
 }
