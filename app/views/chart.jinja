@@ -164,7 +164,7 @@
                     }
                 }
 
-            if (config.events.enable == true && config.events.indices.length > 0){
+                        if (config.events.enable == true && config.events.indices.length > 0){
                 options.series[config.events.indices[0]] = {
                     'type': 'line',
                     tooltip: 'none',
@@ -199,36 +199,35 @@
                     charts.push(volumeChart);
                 }
 
-                if(config.rsi.enable){
-                    if ($('#rsi_div').length == 0) {
-                        $('#technical_div').append(
-                                "<div id='rsi_div' class='bottom_chart'>" +
-                                "<span class='technical_title'>RSI</span>" +
-                                "<div id='rsi_chart'></div>" +
-                                "</div>")
-                    }
-                    var up = config.candlestick.numViews + config.rsi.indices['up'];
-                    var value = config.candlestick.numViews + config.rsi.indices['value'];
-                    var down = config.candlestick.numViews + config.rsi.indices['down'];
-
-                    var rsiChart = new google.visualization.ChartWrapper({
-                        'chartType': 'LineChart',
-                        'containerId': 'rsi_chart',
-                        'options': {
-                            'hAxix': {'slantedText': false},
-                            'legend': {'position': 'none'},
-                            'series': {
-                                0: {color: 'black', lineWidth: 1},
-                                1: {color: '#e2431e'},
-                                2: {color: 'black', lineWidth: 1}
-                            }
-                        },
-                        'view': {
-                            'columns': [ { 'type': 'string' }, up, value, down]
-                        }
-                    });
-                    charts.push(rsiChart);
+                if (config.rsi.enable == true) {
+                if ($('#rsi_div').length == 0) {
+                    $('#technical_div').append(
+                            "<div id='rsi_div' class='bottom_chart'>" +
+                            "<span class='technical_title'>RSI</span>" +
+                            "<div id='rsi_chart'></div>" +
+                            "</div>")
                 }
+                var up = config.candlestick.numViews + config.rsi.indices['up'];
+                var value = config.candlestick.numViews + config.rsi.indices['value'];
+                var down = config.candlestick.numViews + config.rsi.indices['down'];
+                var rsiChart = new google.visualization.ChartWrapper({
+                    'chartType': 'LineChart',
+                    'containerId': 'rsi_chart',
+                    'options': {
+                        'hAxis': {'slantedText': false},
+                        'legend': {'position': 'none'},
+                        'series': {
+                            0: {color: 'black', lineWidth: 1},
+                            1: {color: '#e2431e'},
+                            2: {color: 'black', lineWidth: 1}
+                        }
+                    },
+                    'view': {
+                        'columns': [ { 'type': 'string' }, up, value, down]
+                    }
+                });
+                charts.push(rsiChart)
+            }
 
 
                 var controlWrapper = new google.visualization.ControlWrapper({
@@ -280,7 +279,6 @@
                     params["bbandsK"] = config.bbands.k;
                 }
                 if(config.rsi.enable){
-
                     params["rsi"] = true;
                     params["rsiPeriod"] = config.rsi.period;
                 }
@@ -343,37 +341,37 @@
                         config.bbands.down = down;
                     }
 
-                    if(data["rsi"] != undefined){
-                        config.dataTable.index++;
-                        config.rsi.indices['up'] = config.dataTable.index;
-                        config.dataTable.index++;
-                        config.rsi.indices['value'] = config.dataTable.index;
-                        config.dataTable.index++;
-                        config.rsi.indices['down'] = config.dataTable.index;
-                        config.rsi.period = data['rsi']['period']
-                        config.rsi.values = data['rsi']['values']
-                        dataTable.addColumn('number', 'RSI Thread');
-                        dataTable.addColumn('number', 'RSI(' + config.rsi.period + ')');
-                        dataTable.addColumn('number', 'RSI Thread');
+                if (data['events'] != undefined) {
+                    config.dataTable.index += 1;
+                    config.events.indices[0] = config.dataTable.index;
+                    config.dataTable.index += 1;
+                    config.events.indices[1] = config.dataTable.index;
+
+                    config.events.values = data['events']['signals'];
+                    config.events.first = config.events.values.shift();
+
+                    dataTable.addColumn('number', 'Marker');
+                    dataTable.addColumn({type:'string', role:'annotation'});
+
+                    if (data['events']['profit'] != undefined) {
+                        profit = "$" + String(Math.round(data['events']['profit'] * 100) / 100);
+                        $('#profit').html("Change:" + profit);
                     }
-
-                    if(data["events"] != undefined){
-                        config.dataTable.index++;
-                        config.events.indices[0] = config.dataTable.index;
-                        config.dataTable.index++;
-                        config.events.indices[1] = config.dataTable.index;
-                        config.events.values = data["events"]["signals"];
-                        config.events.first = config.events.values.shift();
-                        
-                        dataTable.addColumn('number', 'Marker');
-                        dataTable.addColumn({type:'string', role:'annotation'});
-
-                        if (data['events']['profit'] != undefined) {
-                            profit = "$" + String(Math.round(data['events']['profit'] * 100) / 100);
-                            $('#profit').html("Change:" + profit);
-                        }
-                    }
-
+                }
+                
+                if (data['rsi'] != undefined ){
+                    config.dataTable.index += 1;
+                    config.rsi.indices['up'] = config.dataTable.index;
+                    config.dataTable.index += 1;
+                    config.rsi.indices['value'] = config.dataTable.index;
+                    config.dataTable.index += 1;
+                    config.rsi.indices['down'] = config.dataTable.index;
+                    config.rsi.period = data['rsi']['period'];
+                    config.rsi.values = data['rsi']['values'];
+                    dataTable.addColumn('number', 'RSI Thread');
+                    dataTable.addColumn('number', 'RSI(' + config.rsi.period + ')');
+                    dataTable.addColumn('number', 'RSI Thread');
+                }
                     var googleChartData = [];
                     var candles = data["candles"];
 
@@ -424,15 +422,6 @@
                                 datas.push(config.bbands.down[i]);
                             }
                         }
-                        if(data['rsi'] != undefined){
-                            datas.push(config.rsi.up);
-                            if(config.rsi.values[i] == 0){
-                                datas.push(null);
-                            }else{
-                                datas.push(config.rsi.values[i]);
-                            }
-                            datas.push(config.rsi.down);
-                        }
 
                         if(data['events'] != undefined){
                             var event = config.events.first;
@@ -449,8 +438,18 @@
                                 datas.push(null);
                             }
                         }
-                        googleChartData.push(datas);
 
+                        if(data['rsi'] != undefined){
+                            datas.push(config.rsi.up);
+                            if(config.rsi.values[i] == 0){
+                                datas.push(null);
+                            }else{
+                                datas.push(config.rsi.values[i]);
+                            }
+                            datas.push(config.rsi.down);
+                        }
+
+                        googleChartData.push(datas);
                     }
 
                     dataTable.addRows(googleChartData);
