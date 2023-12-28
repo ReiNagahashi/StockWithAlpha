@@ -1,7 +1,11 @@
 package models
 
 import (
+	"log"
+	"sort"
+	"stock-with-alpha/config"
 	"time"
+
 	"github.com/markcheno/go-talib"
 )
 
@@ -321,4 +325,80 @@ func (df *DataFrameCandle) OptimizeRsi() (performance float64, bestPeriod int, b
 	}
 
 	return performance, bestPeriod, buyThread, sellThread
+}
+
+// アルゴリズム毎に最適化したい。その上でどのアルゴがその時点で良いのかをランキングにしたい
+func (df *DataFrameCandle) OptimizeParams() *TradeParams{
+	emaPerformance, emaPeriod1, emaPeriod2 := df.OptimizeEma()
+	bbandsPerformance, bbandN, bbandK := df.OptimizeBb()
+	rsiPerformance, rsiPeriod, rsiBuyThread, rsiSellThread := df.OptimizeRsi()
+
+	emaParams := &Ranking{
+		Name: "Ema",
+		Performance: emaPerformance,
+		Ranking: -1,
+		IsEnable: false,
+	}
+
+	bbandsParams := &Ranking{
+		Name:"Bbands",
+		Performance: bbandsPerformance,
+		Ranking: -1,
+		IsEnable: false,
+	}
+
+	rsiParams := &Ranking{
+		Name:"Rsi",
+		Performance: rsiPerformance,
+		Ranking: -1,
+		IsEnable: false,
+	}
+
+	rankings := []*Ranking{emaParams, bbandsParams, rsiParams}
+	sort.Slice(rankings, func(i, j int) bool {
+		return rankings[i].Performance > rankings[j].Performance
+	})
+
+	// paramsデータを新たに作る必要があるか
+	canCreate := false
+
+	for i := 0; i < config.Config.NumRanking;i++{
+		rankings[i].Ranking = i+1
+
+		if rankings[i].Performance > 0{
+			rankings[i].IsEnable = true
+		}
+		// isCreatedがtrueの時は新たにrankingデータがdbに作られたことを意味する→paramsもデータを挿入する必要がある
+		isCreated, err := rankings[i].CreateRanking()
+		if err != nil{
+			log.Println(err)
+		}
+		canCreate = isCreated
+	}
+
+	parsedDate, err := time.Parse("2006-01-02", time.Now().Format("2006-01-02"))
+	if err != nil {
+		log.Println("Error parsing date:", err)
+	}
+
+	tradeParams := TradeParams{
+		EmaEnable: emaParams.IsEnable,
+		EmaPeriod1: emaPeriod1,
+		EmaPeriod2: emaPeriod2,
+		BbEnable: bbandsParams.IsEnable,
+		BbN: bbandN,
+		BbK: bbandK,
+		RsiEnable: rsiParams.IsEnable,
+		RsiPeriod: rsiPeriod,
+		RsiBuyThread: rsiBuyThread,
+		RsiSellThread: rsiSellThread,
+		Time: parsedDate,
+	}
+
+	if canCreate == true{
+		tradeParams.CreateTradeParams()
+	}
+
+	return &tradeParams
+
 }

@@ -59,7 +59,43 @@ func init(){
 			log.Fatalln(err)
 		}
 	}
-	
+
+	// 取引アルゴリズムのインディケーターを保存するdb
+	paramsTableName := fmt.Sprintf("%s_params", config.Config.Symbol)
+
+	cmd = fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		time DATETIME UNIQUE,
+		emaEnable BOOL,
+		emaPeriod1 INTEGER,
+		emaPeriod2 INTEGER,
+		bbEnable BOOL,
+		bbN INTEGER,
+		bbK FLOAT,
+		rsiEnable BOOL,
+		rsiPeriod INTEGER,
+		rsiBuyThread FLOAT,
+		rsiSellThread FLOAT
+	)`, paramsTableName)
+	_, err = DbConnection.Exec(cmd)
+	if err != nil{
+		log.Fatalln(err)
+	}
+
+	// 取引アルゴリズムの１つのフィールドは複数のrankingのテーブル→paramsとrankingはManyToManyの関係
+	rankingTableName := GetRankingTableName(config.Config.Symbol)
+
+	cmd = fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		time DATETIME,
+		name STRING,
+		ranking INTEGER,
+		performance FLOAT
+	)`, rankingTableName)
+	_, err = DbConnection.Exec(cmd)
+	if err != nil{
+		log.Fatalln(err)
+	}
 
 
 }

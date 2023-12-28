@@ -3,6 +3,7 @@ package alpha
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -50,7 +51,7 @@ func (api *APIClient) doRequest(method, urlPath string, query map[string]string,
 	}
 
 	endpoint := baseURL.ResolveReference(apiURL).String()
-	log.Printf("action=doRequest, endpoint=%s", endpoint)
+	fmt.Printf("action=doRequest, endpoint=%s", endpoint)
 
 	req, err := http.NewRequest(method, endpoint, bytes.NewBuffer(data))
 	if err != nil{
@@ -129,15 +130,6 @@ func (api *APIClient) GetDailyTicker(symbol, f string, duration time.Duration) e
 		return err
 	}
 
-	// デコードしたデータを処理
-	// 月名の英語表記マップ
-	monthMap := map[string]string{
-		"01": "Jan", "02": "Feb", "03": "Mar", "04": "Apr",
-		"05": "May", "06": "Jun", "07": "Jul", "08": "Aug",
-		"09": "Sep", "10": "Oct", "11": "Nov", "12": "Dec",
-	}
-
-
 	for date, data := range response.Ticker {
 		symbol := response.MetaDataDaily.Symbol
 		open,_ := strconv.ParseFloat(data.Open, 64)
@@ -145,15 +137,13 @@ func (api *APIClient) GetDailyTicker(symbol, f string, duration time.Duration) e
 		high, _ := strconv.ParseFloat(data.High, 64)
 		low, _ := strconv.ParseFloat(data.Low, 64)
 		volume, _ := strconv.ParseFloat(data.Volume, 64)
-		dateParts := strings.Split(date, "-")
+		datePart := strings.Split(date, " ")[0]
 
-		modifiedDate := dateParts[0] + "-" + monthMap[dateParts[1]] + "-" + dateParts[2]
-
-		dateResult, err := time.Parse("2006-Jan-02", modifiedDate)
-		if err != nil{
-			return err
+		parsedDate, err := time.Parse("2006-01-02", datePart)
+		if err != nil {
+			log.Println("Error parsing date:", err)
 		}
-
+		
 		candle := models.Candle{
 			Symbol: symbol,
 			Duration: duration,
@@ -162,11 +152,11 @@ func (api *APIClient) GetDailyTicker(symbol, f string, duration time.Duration) e
 			High: high,
 			Low: low,
 			Volume: volume,
-			DateTime: dateResult,
+			DateTime: parsedDate,
 		}
 
 
-		models.CreateCandleWithDuration(candle, symbol, dateResult, duration)
+		models.CreateCandleWithDuration(candle, symbol, parsedDate, duration)
 
 	}
 	
@@ -187,15 +177,6 @@ func (api *APIClient) GetWeeklyTicker(symbol, f string, duration time.Duration) 
 		return err
 	}
 
-	// デコードしたデータを処理
-	// 月名の英語表記マップ
-	monthMap := map[string]string{
-		"01": "Jan", "02": "Feb", "03": "Mar", "04": "Apr",
-		"05": "May", "06": "Jun", "07": "Jul", "08": "Aug",
-		"09": "Sep", "10": "Oct", "11": "Nov", "12": "Dec",
-	}
-
-
 	for date, data := range response.Ticker {
 		symbol := response.MetaDataWeekly.Symbol
 		open,_ := strconv.ParseFloat(data.Open, 64)
@@ -203,13 +184,11 @@ func (api *APIClient) GetWeeklyTicker(symbol, f string, duration time.Duration) 
 		high, _ := strconv.ParseFloat(data.High, 64)
 		low, _ := strconv.ParseFloat(data.Low, 64)
 		volume, _ := strconv.ParseFloat(data.Volume, 64)
-		dateParts := strings.Split(date, "-")
+		datePart := strings.Split(date, " ")[0]
 
-		modifiedDate := dateParts[0] + "-" + monthMap[dateParts[1]] + "-" + dateParts[2]
-
-		dateResult, err := time.Parse("2006-Jan-02", modifiedDate)
-		if err != nil{
-			return err
+		parsedDate, err := time.Parse("2006-01-02", datePart)
+		if err != nil {
+			log.Println("Error parsing date:", err)
 		}
 
 		candle := models.Candle{
@@ -220,11 +199,11 @@ func (api *APIClient) GetWeeklyTicker(symbol, f string, duration time.Duration) 
 			High: high,
 			Low: low,
 			Volume: volume,
-			DateTime: dateResult,
+			DateTime: parsedDate,
 		}
 
 
-		models.CreateCandleWithDuration(candle, symbol, dateResult, duration)
+		models.CreateCandleWithDuration(candle, symbol, parsedDate, duration)
 
 	}
 	

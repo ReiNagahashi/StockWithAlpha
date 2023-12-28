@@ -69,7 +69,6 @@ func GetCandle(symbol string, duration time.Duration, dateTime time.Time) *Candl
 	var candle Candle
 	err := row.Scan(&candle.DateTime, &candle.Open, &candle.Close, &candle.High, &candle.Low, &candle.Volume)
 	if err != nil{
-		fmt.Println("You have latest data")
 		return nil
 	}
 
@@ -77,20 +76,19 @@ func GetCandle(symbol string, duration time.Duration, dateTime time.Time) *Candl
 }
 
 
-// とってきたティッカーをデータベースに書き込む
+// とってきたキャンドルをデータベースに書き込む
 func CreateCandleWithDuration(candle Candle, symbol string, date time.Time, duration time.Duration){
 	currentCandle := GetCandle(symbol, duration, date)
 	if currentCandle == nil{
 		candle.Create()
 		return
 	}
-	candle.Save()
-	
+	candle.Save()	
 }
 
 func GetAllCandle(symbol string, duration time.Duration, limit int) (dfCandle *DataFrameCandle, err error){
 	tableName := GetCandleTableName(symbol, duration)
-	// 一旦ティッカーデータ群をリバースした上でリミットすることで、最新のデータをリミットして取得できるようにする
+	// 一旦キャンドルデータ群をリバースした上でリミットすることで、最新のデータをリミットして取得できるようにする
 	// ただし、リバースしたらあとはもとに戻しておくこと(最後にASCにしている)
 	cmd := fmt.Sprintf(`SELECT * FROM (
 		SELECT time, open, close, high, low, volume FROM %s ORDER BY time DESC LIMIT ?
