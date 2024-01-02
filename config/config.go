@@ -21,8 +21,6 @@ type ConfigList struct{
 	DataLimit 			int
 	StopLimitPercent 	float64
 	NumRanking 			int
-
-	Algorithms 			map[int]string
 }
 
 
@@ -47,12 +45,6 @@ func init(){
 		"week": Week,
 	}
 
-	algorithms := map[int]string{
-		1:"Ema",
-		2:"Bbands",
-		3:"Rsi",
-	}
-
 	Config = ConfigList{
 		ApiKey: cfg.Section("alpha_vantage").Key("api_key").String(),
 		LogFile: cfg.Section("stockWithAlpha").Key("log_file").String(),
@@ -66,6 +58,5 @@ func init(){
 		DataLimit: cfg.Section("stockWithAlpha").Key("data_limit").MustInt(),
 		StopLimitPercent: cfg.Section("stockWithAlpha").Key("stop_limit_percent").MustFloat64(),
 		NumRanking: cfg.Section("stockWithAlpha").Key("num_ranking").MustInt(),
-		Algorithms: algorithms,
 	}
 }

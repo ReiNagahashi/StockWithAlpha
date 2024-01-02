@@ -371,14 +371,14 @@ func (df *DataFrameCandle) OptimizeParams() *TradeParams{
 		// isCreatedがtrueの時は新たにrankingデータがdbに作られたことを意味する→paramsもデータを挿入する必要がある
 		isCreated, err := rankings[i].CreateRanking()
 		if err != nil{
-			log.Println(err)
+			log.Fatalln(err)
 		}
 		canCreate = isCreated
 	}
 
 	parsedDate, err := time.Parse("2006-01-02", time.Now().Format("2006-01-02"))
 	if err != nil {
-		log.Println("Error parsing date:", err)
+		log.Fatalln("Error parsing date:", err)
 	}
 
 	tradeParams := TradeParams{
@@ -395,7 +395,7 @@ func (df *DataFrameCandle) OptimizeParams() *TradeParams{
 		Time: parsedDate,
 	}
 
-	if canCreate == true{
+	if canCreate{
 		tradeParams.CreateTradeParams()
 	}
 

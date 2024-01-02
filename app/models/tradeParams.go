@@ -78,7 +78,7 @@ func GetRankingTableName(symbol string) string{
 func (r *Ranking) CreateRanking() (bool, error){
 	parsedDate, err := time.Parse("2006-01-02", time.Now().Format("2006-01-02"))
 	if err != nil {
-		log.Println("Error parsing date:", err)
+		log.Fatalln("Error parsing date:", err)
 	}
 	currentRanking := GetRanking(parsedDate, r.Name)
 

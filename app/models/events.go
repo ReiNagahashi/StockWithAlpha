@@ -210,7 +210,6 @@ func (s SignalEvents) MarshalJSON() ([] byte, error){
 
 
 func (s *SignalEvents) CollectAfter(time time.Time) *SignalEvents{
-	fmt.Println(s.Signals)
 	for i, signal := range s.Signals{
 
 		if time.After(signal.Time){

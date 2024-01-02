@@ -77,13 +77,15 @@ func GetCandle(symbol string, duration time.Duration, dateTime time.Time) *Candl
 
 
 // とってきたキャンドルをデータベースに書き込む
-func CreateCandleWithDuration(candle Candle, symbol string, date time.Time, duration time.Duration){
+func CreateCandleWithDuration(candle Candle, symbol string, date time.Time, duration time.Duration) bool{
 	currentCandle := GetCandle(symbol, duration, date)
 	if currentCandle == nil{
 		candle.Create()
-		return
+		return true
 	}
 	candle.Save()	
+	
+	return false
 }
 
 func GetAllCandle(symbol string, duration time.Duration, limit int) (dfCandle *DataFrameCandle, err error){
