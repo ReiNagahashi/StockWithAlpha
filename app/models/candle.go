@@ -51,16 +51,6 @@ func (c *Candle) Create() error{
 }
 
 
-func (c *Candle) Save() error{
-	cmd := fmt.Sprintf("UPDATE %s SET open = ?, close = ?, high = ?, low = ?, volume = ? WHERE time = ?", c.TableName())
-	_, err := DbConnection.Exec(cmd, c.Open, c.Close, c.High, c.Low, c.Volume, c.DateTime)
-	if err != nil{
-		return err
-	}
-
-	return err
-}
-
 func GetCandle(symbol string, duration time.Duration, dateTime time.Time) *Candle{
 	tableName := GetCandleTableName(symbol, duration)
 	cmd := fmt.Sprintf("SELECT time, open, close, high, low, volume FROM %s WHERE time = ?", tableName)
@@ -83,7 +73,6 @@ func CreateCandleWithDuration(candle Candle, symbol string, date time.Time, dura
 		candle.Create()
 		return true
 	}
-	candle.Save()	
 	
 	return false
 }

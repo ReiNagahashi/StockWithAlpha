@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"regexp"
+	"stock-with-alpha/alpha"
 	"stock-with-alpha/app/models"
 	"stock-with-alpha/config"
 	"strconv"
@@ -23,7 +24,6 @@ func viewChartHandler(w http.ResponseWriter, r *http.Request){
 
 
 // 以下はキャンドルデータを非同期処理(AJAX)で取ってくるためにJsonにデータフォーマットに変換した上でAJAXがAPIを取りに行かせる
-
 type JSONError struct{
 	Error string `json:"error"`
 	Code int `json:"code"`
@@ -42,11 +42,11 @@ func APIError(w http.ResponseWriter, errMessage string, code int){
 	w.Write(jsonError)
 }
 
-
-var apiValidPath = regexp.MustCompile("^/api/candle/$")
-func apiMakeHandler(fn func(http.ResponseWriter, *http.Request)) http.HandlerFunc{
+// キャンドル送信用のAPIの正規表現
+var candleApiValidPath = regexp.MustCompile("^/api/candle/$")
+func candleApiMakeHandler(fn func(http.ResponseWriter, *http.Request)) http.HandlerFunc{
 	return func(w http.ResponseWriter, r *http.Request){
-		m := apiValidPath.FindStringSubmatch(r.URL.Path)
+		m := candleApiValidPath.FindStringSubmatch(r.URL.Path)
 		if len(m) == 0{
 			APIError(w, "Not found", http.StatusNotFound)
 		}
@@ -175,8 +175,80 @@ func apiCandleHandler(w http.ResponseWriter, r *http.Request){
 	w.Write(js)
 }
 
+
+// ティッカー検索API用の正規表現
+var tickerSearchApiValidPath = regexp.MustCompile("^/api/ticker_search/?$")
+func tickerSearchApiMakeHandler(fn func(http.ResponseWriter, *http.Request)) http.HandlerFunc{
+	return func(w http.ResponseWriter, r *http.Request){
+		m := tickerSearchApiValidPath.FindStringSubmatch(r.URL.Path)
+		if len(m) == 0{
+			APIError(w, "Not found", http.StatusNotFound)
+		}
+		fn(w, r)
+	}
+}
+
+
+func tickerSearchHandler(w http.ResponseWriter, r *http.Request) {
+	keyword := r.URL.Query().Get("keyword")
+	if keyword == "" {
+		APIError(w, "No keyword!", http.StatusBadRequest)
+	}
+
+	apiClient := alpha.New(config.Config.ApiKey)
+	
+	tickerByKeyword, err := apiClient.GetTickerInfo("SYMBOL_SEARCH", keyword)
+	if err != nil{
+		log.Fatalln(err)
+	}
+
+	js, err := json.Marshal(tickerByKeyword)
+	if err != nil{
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(js)
+}
+
+
+// ingestionCandle: 引数としてのティッカー情報をもとにテーブルを作る関数
+var ingestionCandleApiValidPath = regexp.MustCompile("^/api/ingestion_candle/$")
+func ingestionCandleApiMakeHandler(fn func(http.ResponseWriter, *http.Request)) http.HandlerFunc{
+	return func(w http.ResponseWriter, r *http.Request){
+		m := ingestionCandleApiValidPath.FindStringSubmatch(r.URL.Path)
+		if len(m) == 0{
+			APIError(w, "Not found", http.StatusNotFound)
+		}
+		fn(w, r)
+	}
+}
+
+
+func ingestionCandleHandler(w http.ResponseWriter, r *http.Request) {
+	symbol := r.URL.Query().Get("symbol")
+	fmt.Println(symbol)
+	if symbol == "" {
+		APIError(w, "No Symbol!", http.StatusBadRequest)
+	}
+
+	apiClient := alpha.New(config.Config.ApiKey)
+
+	// symbolの名前でテーブルを作成
+	models.CreateTableBySymbol(symbol)
+	
+	// ティッカーをAPIで持ってきて構造体にする。その後にテーブルにティッカーに基づいて作られたキャンドルデータを挿入
+	err := apiClient.GetDailyTicker(symbol, "TIME_SERIES_DAILY", config.Config.Durations["day"])
+	if err != nil{
+		log.Println("Failed to ingestion data for daily...")
+	}
+}
+
+
 func StartWebServer() error {
-	http.HandleFunc("/api/candle/", apiMakeHandler(apiCandleHandler))
+	http.HandleFunc("/api/candle/", candleApiMakeHandler(apiCandleHandler))
+	http.HandleFunc("/api/ticker_search/", tickerSearchApiMakeHandler(tickerSearchHandler))
+	http.HandleFunc("/api/ingestion_candle/", ingestionCandleApiMakeHandler(ingestionCandleHandler))
 	http.HandleFunc("/chart/", viewChartHandler)
 	return http.ListenAndServe(fmt.Sprintf(":%d", config.Config.Port), nil)
 }

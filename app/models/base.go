@@ -6,7 +6,6 @@ import (
 	"log"
 	"stock-with-alpha/config"
 	"time"
-
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -19,6 +18,28 @@ var DbConnection *sql.DB
 
 func GetCandleTableName(symbol string, duration time.Duration) string{
 	return fmt.Sprintf("%s_%s", symbol, duration)
+}
+
+// テーブルを作成(日足)
+func CreateTableBySymbol(symbol string){
+		// キャンドルデータのテーブル
+		tableName := GetCandleTableName(symbol, config.Day)
+
+		c := fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s (
+			time DATETIME PRIMARY KEY NOT NULL,
+			open FLOAT,
+			close FLOAT,
+			high FLOAT,
+			low FLOAT,
+			volume FLOAT
+		)`, tableName)
+
+		_, err := DbConnection.Exec(c)
+		if err != nil{
+			log.Fatalln(err)
+		}
+
+		fmt.Println("Table created successfully!")
 }
 
 
@@ -82,7 +103,6 @@ func init(){
 		log.Fatalln(err)
 	}
 
-	// 取引アルゴリズムの１つのフィールドは複数のrankingのテーブル→paramsとrankingはManyToManyの関係
 	rankingTableName := GetRankingTableName(config.Config.Symbol)
 
 	cmd = fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s (

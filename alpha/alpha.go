@@ -211,4 +211,33 @@ func (api *APIClient) GetWeeklyTicker(symbol, f string, duration time.Duration) 
 }
 
 
+type TickerByKeyword struct {
+	BestMatches []struct {
+		Symbol      string `json:"1. symbol"`
+		Name        string `json:"2. name"`
+		Type      string `json:"3. type"`
+		Region     string `json:"4. region"`
+		MarketOpen string `json:"5. marketOpen"`
+		MarketClose string `json:"6. marketClose"`
+		Timezone  string `json:"7. timezone"`
+		Currency  string `json:"8. currency"`
+		MatchScore string `json:"9. matchScore"`
+	} `json:"bestMatches"`
+}
 
+
+func (api *APIClient) GetTickerInfo(f, keyword string) (*TickerByKeyword, error){
+	resp, err := api.doRequest("GET", "", map[string]string{"function": f, "keywords": keyword, "apikey": config.Config.ApiKey}, nil)
+	if err != nil{
+		return nil, err
+	}
+	
+	var response = TickerByKeyword{}
+	
+	if err := json.Unmarshal([]byte(resp), &response); err != nil {
+		return nil, err
+	}
+
+	return &response, nil
+
+}

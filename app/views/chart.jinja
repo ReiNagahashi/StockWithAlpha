@@ -23,6 +23,41 @@
             .bottom_chart{
                 border-bottom: 1px solid #ccc;
             }
+            
+        /* モーダルウィンドウのスタイル */
+        .modal {
+            display: none; /* 最初は非表示 */
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 15% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
         </style>
         <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
         <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
@@ -84,6 +119,9 @@
                     indices: [],
                     values: [],
                     first: null
+                },
+                tickersBySearch: {
+                    tickers: []
                 }
             };
             //sendでデータを取ってきて再描画するために各パラメータを初期化する
@@ -102,6 +140,7 @@
                 config.events.indices = [];
                 config.events.values = [];
             }
+
 
             function drawChart(dataTable){
                 var chartDiv = document.getElementById('chart_div');
@@ -247,8 +286,37 @@
                 dashboard.bind(controlWrapper, charts);
                 dashboard.draw(dataTable)
             }
-            //データを取ってきて描画 
-            function send(){
+            //キーワードがフォームに入力されたら候補となるティッカーをリストとして表示
+            function sendTickerKeyword(keyword){
+                var param = {"keyword": keyword};
+                const ul = document.getElementById("ticker_list");
+
+                $.get("/api/ticker_search/", param).done(function(data){
+                    config.tickersBySearch = data["bestMatches"];
+
+                    config.tickersBySearch.forEach((ticker, i) => {
+                        const li = document.createElement("li");
+                        li.innerHTML = `${ticker["2. name"]}(Ticker Code: ${ticker["1. symbol"]}) <button class="open-modal" data-index = ${i}>Click Me</button>`;
+
+                        ul.appendChild(li);
+                    });
+
+                })
+            }
+
+
+            function getTicker(symbol){
+                console.log("YAYYY")
+                config.candlestick.symbol = symbol;
+                $.get("/api/ingestion_candle/", {'symbol':symbol}).done(function(data){
+                    sendCandleData();
+                    console.log(`${symbol} data successfully inserted!!`);
+                })
+            }
+
+
+            //キャンドルデータをバックエンドから取ってきてそれを描画する関数を実行
+            function sendCandleData(){
                 // enableがfalseの場合はAJAXがデータを取ってこないようにする
                 //if(!config.api.enable) return
                 //以下で辞書paramsに任意のフィールドを設定してあげる
@@ -341,26 +409,26 @@
                         config.bbands.down = down;
                     }
 
-                if (data['events'] != undefined && data['events']['signals'] != undefined) {
-                    config.dataTable.index += 1;
-                    config.events.indices[0] = config.dataTable.index;
-                    config.dataTable.index += 1;
-                    config.events.indices[1] = config.dataTable.index;
+                    if (data['events'] != undefined && data['events']['signals'] != undefined) {
+                        config.dataTable.index += 1;
+                        config.events.indices[0] = config.dataTable.index;
+                        config.dataTable.index += 1;
+                        config.events.indices[1] = config.dataTable.index;
 
-                    config.events.values = data['events']['signals'];
+                        config.events.values = data['events']['signals'];
 
-                    config.events.first = config.events.values.shift();
+                        config.events.first = config.events.values.shift();
 
-                    dataTable.addColumn('number', 'Marker');
-                    dataTable.addColumn({type:'string', role:'annotation'});
+                        dataTable.addColumn('number', 'Marker');
+                        dataTable.addColumn({type:'string', role:'annotation'});
 
-                    if (data['events']['profit'] != undefined) {
-                        profit = "$" + String(Math.round(data['events']['profit'] * 100) / 100);
-                        $('#profit').html("Change:" + profit);
+                        if (data['events']['profit'] != undefined) {
+                            profit = "$" + String(Math.round(data['events']['profit'] * 100) / 100);
+                            $('#profit').html("Change:" + profit);
+                        }
                     }
-                }
-                
-                if (data['rsi'] != undefined ){
+                    
+                    if (data['rsi'] != undefined ){
                     config.dataTable.index += 1;
                     config.rsi.indices['up'] = config.dataTable.index;
                     config.dataTable.index += 1;
@@ -458,14 +526,15 @@
                 })
             }
 
+
             function changeDuration(s){
                 config.candlestick.duration = s;
-                send();
+                sendCandleData();
             }
 
             //setInterval(send, 1000*3)
             window.onload = function (){
-                send()
+                sendCandleData()
                 //カーソルがチャート上に乗った場合にenableがfalseになる
                 //$('#dashboard_div').mouseenter(function() {
                     //config.api.enable = false;
@@ -476,60 +545,60 @@
                 // Smaに関するjquery
                 $('#inputSma').change(function() {
                     config.sma.enable = this.checked;
-                    send();
+                    sendCandleData();
                 });
 
                 $("#inputSmaPeriod1").change(function() {
                     config.sma.periods[0] = this.value;
-                    send();
+                    sendCandleData();
                 })
                 $("#inputSmaPeriod2").change(function() {
                     config.sma.periods[1] = this.value;
-                    send();
+                    sendCandleData();
                 })
                 $("#inputSmaPeriod3").change(function() {
                     config.sma.periods[2] = this.value;
-                    send();
+                    sendCandleData();
                 })
 
                 // Emaに関するjquery
                 $('#inputEma').change(function() {
                     config.ema.enable = this.checked;
-                    send();
+                    sendCandleData();
                 });
 
                 $("#inputEmaPeriod1").change(function() {
                     config.ema.periods[0] = this.value;
-                    send();
+                    sendCandleData();
                 })
                 $("#inputEmaPeriod2").change(function() {
                     config.ema.periods[1] = this.value;
-                    send();
+                    sendCandleData();
                 })
                 $("#inputEmaPeriod3").change(function() {
                     config.ema.periods[2] = this.value;
-                    send();
+                    sendCandleData();
                 }) 
 
                 $('#inputBBands').change(function() {
                     config.bbands.enable = this.checked;
-                    send();
+                    sendCandleData();
                 });
 
                 $("#inputBBandsN").change(function() {
                     config.bbands.n = this.value;
-                    send();
+                    sendCandleData();
                 });
 
                 $("#inputBBandsK").change(function() {
                     config.bbands.n = this.value;
-                    send();
+                    sendCandleData();
                 });
                 //出来高チャートの表示のトグル
                 $("#inputVolume").change(function(){
                     if(this.checked){
                         config.volume.enable = true;
-                        send();
+                        sendCandleData();
                     }
                     else{
                         config.volume.enable = false;
@@ -539,7 +608,7 @@
                 $("#inputRsi").change(function() {
                     if(this.checked){
                         config.rsi.enable = true;
-                        send();
+                        sendCandleData();
                     }else{
                         config.rsi.enable = false;
                         $("#rsi_div").remove();
@@ -548,13 +617,13 @@
                 });
                 $("#inputRsiPeriod").change(function(){
                     config.rsi.period = this.value;
-                    send();
+                    sendCandleData();
                 });
 
                 $("#inputEvents").change(function() {
                     if(this.checked){
                         config.events.enable = true;
-                        send();
+                        sendCandleData();
                     }else{
                         config.events.enable = false;
                         $("#events_div").remove();
@@ -563,12 +632,45 @@
                 });
                 $("#inputEventsPeriod").change(function(){
                     config.events.period = this.value;
-                    send();
+                    sendCandleData();
                 });
+
+                $("#input_ticker_keyword").change(function(){
+                    if(this.value.length > 0) sendTickerKeyword(this.value);
+                })
+
+                //ティッカーリスト内のボタンを押した時に表示されるモーダル
+                $(document).on("click", ".open-modal", function(){
+                    let index = $(this).data("index");
+                    let symbol = config.tickersBySearch[index]["1. symbol"]
+                    let name = config.tickersBySearch[index]["2. name"];
+                    $("#modal-content").html(`URL: <a href = "google.com">${name}</a>`);
+                    $("#modal-content").append(
+                        `<h3>Name: ${name}</h3`+
+                        "<p>Look Details of this product</p>"+
+                        `<button onclick='getTicker("${symbol}")'>Open Chart</button>`)
+                    $("#myModal").show();
+                });
+
+                //モーダルのクローズ
+                $(".close").click(function(){
+                    $("#myModal").hide();
+                });
+
             }
         </script>
     </head>
     <body>
+        <div>
+            <input type="text" id="input_ticker_keyword">
+        </div>
+        <ul id="ticker_list"></ul>
+        <div id="myModal" class="modal">
+            <div class="modal-content">
+                <span class="close">&times;</span>
+                <p id="modal-content">ここにURLが表示されます</p>
+            </div>
+        </div>
         <div>
             <button onclick="changeDuration('day');">Day</button>
             <button onclick="changeDuration('week');">Week</button>
