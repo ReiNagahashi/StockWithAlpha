@@ -118,7 +118,7 @@ type ResponseDaily struct {
 	Ticker 			 map[string]TimeSeriesEntry `json:"Time Series (Daily)"`
 }
 
-func (api *APIClient) GetDailyTicker(symbol, f string, duration time.Duration) error{
+func (api *APIClient) GetDailyTicker(symbol, name, f string, duration time.Duration) error{
 	resp, err := api.doRequest("GET", "", map[string]string{"symbol": symbol, "function": f, "apikey": config.Config.ApiKey}, nil)
 	if err != nil{
 		return err
@@ -132,6 +132,7 @@ func (api *APIClient) GetDailyTicker(symbol, f string, duration time.Duration) e
 
 	for date, data := range response.Ticker {
 		symbol := response.MetaDataDaily.Symbol
+		name := name
 		open,_ := strconv.ParseFloat(data.Open, 64)
 		close,_ := strconv.ParseFloat(data.Close, 64)
 		high, _ := strconv.ParseFloat(data.High, 64)
@@ -146,6 +147,7 @@ func (api *APIClient) GetDailyTicker(symbol, f string, duration time.Duration) e
 		
 		candle := models.Candle{
 			Symbol: symbol,
+			Name: name,
 			Duration: duration,
 			Open: open,
 			Close: close,
@@ -156,7 +158,7 @@ func (api *APIClient) GetDailyTicker(symbol, f string, duration time.Duration) e
 		}
 
 
-		models.CreateCandleWithDuration(candle, symbol, parsedDate, duration)
+		models.CreateCandleWithDuration(candle, symbol, name, parsedDate, duration)
 
 	}
 	
@@ -165,50 +167,50 @@ func (api *APIClient) GetDailyTicker(symbol, f string, duration time.Duration) e
 
 
 
-func (api *APIClient) GetWeeklyTicker(symbol, f string, duration time.Duration) error{
-	resp, err := api.doRequest("GET", "", map[string]string{"symbol": symbol, "function": f, "apikey": config.Config.ApiKey}, nil)
-	if err != nil{
-		return err
-	}
+// func (api *APIClient) GetWeeklyTicker(symbol, f string, duration time.Duration) error{
+// 	resp, err := api.doRequest("GET", "", map[string]string{"symbol": symbol, "function": f, "apikey": config.Config.ApiKey}, nil)
+// 	if err != nil{
+// 		return err
+// 	}
 	
-	var response = ResponseWeekly{}
+// 	var response = ResponseWeekly{}
 	
-	if err := json.Unmarshal([]byte(resp), &response); err != nil {
-		return err
-	}
+// 	if err := json.Unmarshal([]byte(resp), &response); err != nil {
+// 		return err
+// 	}
 
-	for date, data := range response.Ticker {
-		symbol := response.MetaDataWeekly.Symbol
-		open,_ := strconv.ParseFloat(data.Open, 64)
-		close,_ := strconv.ParseFloat(data.Close, 64)
-		high, _ := strconv.ParseFloat(data.High, 64)
-		low, _ := strconv.ParseFloat(data.Low, 64)
-		volume, _ := strconv.ParseFloat(data.Volume, 64)
-		datePart := strings.Split(date, " ")[0]
+// 	for date, data := range response.Ticker {
+// 		symbol := response.MetaDataWeekly.Symbol
+// 		open,_ := strconv.ParseFloat(data.Open, 64)
+// 		close,_ := strconv.ParseFloat(data.Close, 64)
+// 		high, _ := strconv.ParseFloat(data.High, 64)
+// 		low, _ := strconv.ParseFloat(data.Low, 64)
+// 		volume, _ := strconv.ParseFloat(data.Volume, 64)
+// 		datePart := strings.Split(date, " ")[0]
 
-		parsedDate, err := time.Parse("2006-01-02", datePart)
-		if err != nil {
-			log.Println("Error parsing date:", err)
-		}
+// 		parsedDate, err := time.Parse("2006-01-02", datePart)
+// 		if err != nil {
+// 			log.Println("Error parsing date:", err)
+// 		}
 
-		candle := models.Candle{
-			Symbol: symbol,
-			Duration: duration,
-			Open: open,
-			Close: close,
-			High: high,
-			Low: low,
-			Volume: volume,
-			DateTime: parsedDate,
-		}
+// 		candle := models.Candle{
+// 			Symbol: symbol,
+// 			Duration: duration,
+// 			Open: open,
+// 			Close: close,
+// 			High: high,
+// 			Low: low,
+// 			Volume: volume,
+// 			DateTime: parsedDate,
+// 		}
 
 
-		models.CreateCandleWithDuration(candle, symbol, parsedDate, duration)
+// 		models.CreateCandleWithDuration(candle, symbol, name, parsedDate, duration)
 
-	}
+// 	}
 	
-	return nil
-}
+// 	return nil
+// }
 
 
 type TickerByKeyword struct {

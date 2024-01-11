@@ -13,6 +13,7 @@ import (
 // ②UIとやり取りをするデータはここで管理する
 type DataFrameCandle struct{
 	Symbol 	 string 		`json:"symbol"`
+	Name 	 string 		`json:"name"`
 	Candles  []Candle 		`json:"candles"`
 	Duration time.Duration 	`json:"duration"`
 	Smas 	 []Sma 			`json:"smas,omitempty"`

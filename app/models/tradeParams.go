@@ -54,8 +54,6 @@ func GetTradeParams() *TradeParams{
 	if err != nil{
 		return nil
 	}
-	
-	fmt.Println("You already have the data")
 
 	return &params
 }
@@ -107,8 +105,6 @@ func GetRanking(date time.Time, name string) *Ranking{
 	if err != nil{
 		return nil
 	}
-	
-	fmt.Println("You already have the data")
 
 	return &ranking
 }

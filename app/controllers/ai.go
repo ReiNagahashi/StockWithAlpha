@@ -55,7 +55,7 @@ func NewAI(symbol string, duration time.Duration, pastPeriod int, usePercent, st
 } 
 
 func (ai *AI) UpdateOptimizeParams(){
-	df, _ := models.GetAllCandle(ai.Symbol, ai.Duration, ai.PastPeriod)
+	df, _ := models.GetAllCandle(ai.Symbol,"", ai.Duration, ai.PastPeriod)
 	ai.OptimizedTradeParams = df.OptimizeParams()
 }
 
@@ -83,7 +83,7 @@ func (ai *AI) Sell(candle models.Candle) (childOrderAcceptanceID string, isOrder
 
 func (ai *AI) Trade(){
 	params := ai.OptimizedTradeParams
-	df, _ := models.GetAllCandle(ai.Symbol, ai.Duration, ai.PastPeriod)
+	df, _ := models.GetAllCandle(ai.Symbol,"", ai.Duration, ai.PastPeriod)
 	lenCandles := len(df.Candles)
 
 	var emaValues1 []float64

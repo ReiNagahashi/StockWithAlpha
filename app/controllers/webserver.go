@@ -13,10 +13,10 @@ import (
 	"strconv"
 )
 
-var templates = template.Must(template.ParseFiles("app/views/chart.jinja"))
+var templates = template.Must(template.ParseFiles("app/views/chart.html"))
 
 func viewChartHandler(w http.ResponseWriter, r *http.Request){
-	err := templates.ExecuteTemplate(w, "chart.jinja", nil)
+	err := templates.ExecuteTemplate(w, "chart.html", nil)
 	if err != nil{
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
@@ -58,9 +58,10 @@ func candleApiMakeHandler(fn func(http.ResponseWriter, *http.Request)) http.Hand
 func apiCandleHandler(w http.ResponseWriter, r *http.Request){
 	// URL.Query関数によってURL上のクエリにアクセスできる。その上Getで特定の項目を指定して取れる
 	symbol := r.URL.Query().Get("symbol")
-	if symbol == "" {
+	name := r.URL.Query().Get("name")
+	if symbol == "" || name == ""{
 		// api/candle/ のみのURLにアクセスした場合はこのエラーが返ってくる
-		APIError(w, "No symbol param", http.StatusBadRequest)
+		APIError(w, "No symbol or name param", http.StatusBadRequest)
 		return
 	}
 
@@ -74,7 +75,7 @@ func apiCandleHandler(w http.ResponseWriter, r *http.Request){
 		duration = "day"
 	}
 	durationTime := config.Config.Durations[duration]
-	df, _ := models.GetAllCandle(symbol, durationTime, limit)
+	df, _ := models.GetAllCandle(symbol, name, durationTime, limit)
 
 	sma := r.URL.Query().Get("sma")
 	if sma != ""{
@@ -227,21 +228,77 @@ func ingestionCandleApiMakeHandler(fn func(http.ResponseWriter, *http.Request)) 
 
 func ingestionCandleHandler(w http.ResponseWriter, r *http.Request) {
 	symbol := r.URL.Query().Get("symbol")
+	name := r.URL.Query().Get("name")
 	fmt.Println(symbol)
-	if symbol == "" {
-		APIError(w, "No Symbol!", http.StatusBadRequest)
+	if symbol == "" || name == "" {
+		APIError(w, "No Symbol or Name!", http.StatusBadRequest)
 	}
 
 	apiClient := alpha.New(config.Config.ApiKey)
 
 	// symbolの名前でテーブルを作成
-	models.CreateTableBySymbol(symbol)
+	models.CreateTableBySymbol(symbol, name)
 	
 	// ティッカーをAPIで持ってきて構造体にする。その後にテーブルにティッカーに基づいて作られたキャンドルデータを挿入
-	err := apiClient.GetDailyTicker(symbol, "TIME_SERIES_DAILY", config.Config.Durations["day"])
+	err := apiClient.GetDailyTicker(symbol, name, "TIME_SERIES_DAILY", config.Config.Durations["day"])
 	if err != nil{
 		log.Println("Failed to ingestion data for daily...")
 	}
+}
+
+
+
+// dropCandleTable: 引数としてのシンボルをもとにテーブルを削除する関数
+var dropCandleTableApiValidPath = regexp.MustCompile("^/api/drop_candle_table/$")
+func dropCandleTableApiMakeHandler(fn func(http.ResponseWriter, *http.Request)) http.HandlerFunc{
+	return func(w http.ResponseWriter, r *http.Request){
+		m := dropCandleTableApiValidPath.FindStringSubmatch(r.URL.Path)
+		if len(m) == 0{
+			APIError(w, "Not found", http.StatusNotFound)
+		}
+		fn(w, r)
+	}
+}
+
+
+func dropCandleTable(w http.ResponseWriter, r *http.Request) {
+	symbol := r.URL.Query().Get("symbol")
+
+	fmt.Println(symbol)
+	if symbol == ""{
+		APIError(w, "No Symbol or Name!", http.StatusBadRequest)
+	}
+
+	// symbolを基にテーブルを削除
+	models.DropTableBySymbol(symbol)
+	
+}
+
+
+// displayCandleTables: 保存しているキャンドルテーブルの名前を返す
+var displayCandleTablesApiValidPath = regexp.MustCompile("^/api/display_tables/$")
+func displayCandleTablesApiMakeHandler(fn func(http.ResponseWriter, *http.Request)) http.HandlerFunc{
+	return func(w http.ResponseWriter, r *http.Request){
+		m := displayCandleTablesApiValidPath.FindStringSubmatch(r.URL.Path)
+		if len(m) == 0{
+			APIError(w, "Not found", http.StatusNotFound)
+		}
+		fn(w, r)
+	}
+}
+
+
+func displayCandleTablesHandler(w http.ResponseWriter, r *http.Request) {
+	// 日足の既存のテーブル名を全て取得
+	symbolWithName := models.GetCandleTableNames()
+
+	js, err := json.Marshal(symbolWithName)
+	if err != nil{
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(js)
 }
 
 
@@ -249,6 +306,8 @@ func StartWebServer() error {
 	http.HandleFunc("/api/candle/", candleApiMakeHandler(apiCandleHandler))
 	http.HandleFunc("/api/ticker_search/", tickerSearchApiMakeHandler(tickerSearchHandler))
 	http.HandleFunc("/api/ingestion_candle/", ingestionCandleApiMakeHandler(ingestionCandleHandler))
+	http.HandleFunc("/api/drop_candle_table/", dropCandleTableApiMakeHandler(dropCandleTable))
+	http.HandleFunc("/api/display_tables/", displayCandleTablesApiMakeHandler(displayCandleTablesHandler))	
 	http.HandleFunc("/chart/", viewChartHandler)
 	return http.ListenAndServe(fmt.Sprintf(":%d", config.Config.Port), nil)
 }

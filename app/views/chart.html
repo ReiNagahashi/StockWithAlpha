@@ -70,7 +70,8 @@
                  //  interval: 1000*3
               //  },
                 candlestick:{
-                    symbol: 'IBM',
+                    symbol: '',
+                    name: '',
                     duration: '',
                     limit: 365,
                     //カラム数はデフォルトで５としておく。そこに付け足していく感じ
@@ -121,6 +122,10 @@
                     first: null
                 },
                 tickersBySearch: {
+                    tickers: []
+                },
+                portfolio:{
+                    //tickersには{name: , symbol: }が要素として入っている
                     tickers: []
                 }
             };
@@ -291,10 +296,12 @@
                 var param = {"keyword": keyword};
                 const ul = document.getElementById("ticker_list");
 
-                $.get("/api/ticker_search/", param).done(function(data){
-                    config.tickersBySearch = data["bestMatches"];
+                $("#ticker_list").empty();
 
-                    config.tickersBySearch.forEach((ticker, i) => {
+                $.get("/api/ticker_search/", param).done(function(data){
+                    config.tickersBySearch.tickers = data["bestMatches"];
+
+                    config.tickersBySearch.tickers.forEach((ticker, i) => {
                         const li = document.createElement("li");
                         li.innerHTML = `${ticker["2. name"]}(Ticker Code: ${ticker["1. symbol"]}) <button class="open-modal" data-index = ${i}>Click Me</button>`;
 
@@ -304,25 +311,90 @@
                 })
             }
 
-
-            function getTicker(symbol){
-                console.log("YAYYY")
+            // ティッカー検索欄から選んだティッカーのキャンドルテーブルを作ってキャンドルデータを入れた上でポートフォリオに保存する
+            function getTicker(symbol, name){
                 config.candlestick.symbol = symbol;
-                $.get("/api/ingestion_candle/", {'symbol':symbol}).done(function(data){
+                config.candlestick.name = name;
+                const params = {'symbol': symbol ,'name': name};
+
+                $.get("/api/ingestion_candle/", params).done(function(data){
                     sendCandleData();
-                    console.log(`${symbol} data successfully inserted!!`);
+                    console.log(`${name} data successfully inserted!!`);
+                    displayPortfolio();
+                })
+                $("#myModal").hide();
+            }
+
+
+            function deleteCandleTable(index, symbol){
+                if(config.portfolio.tickers.length <= 0) return;
+
+                $.get("/api/drop_candle_table/", {"symbol": symbol}).done(function(data){
+                    console.log("Ready to drop!")
+                    //現在チャートに表示しているティッカーであったり、ポートフォリオの個数に応じて処理を変える
+                    if(symbol == config.candlestick.symbol){
+                        if(config.portfolio.tickers.length == 1){
+                            config.candlestick.symbol = null;
+                            config.candlestick.name = null;
+                        }else{
+                            config.candlestick.symbol = config.portfolio.tickers[0].symbol;
+                            config.candlestick.name = config.portfolio.tickers[0].name;
+                        }
+                    }
+
+                    //フロントエンド上で対象要素を削除
+                    $(`button.switchChart[data-index='${index}']`).remove();
+                    displayPortfolio();
+                    sendCandleData();
+                })
+            }
+
+
+            function switchChart(name="", symbol=""){
+                if(name == "" || symbol == ""){
+                    $('#chart_div').text("No Product chosen");
+                    return;
+                }
+                config.candlestick.name = name;
+                config.candlestick.symbol = symbol;
+            }
+
+
+            function displayPortfolio(){
+                config.portfolio.tickers = [];
+                //dataはsymbol, nameを持った配列を持つ
+                $.get("/api/display_tables/").done(function(data){
+                    $("#ticker_list_by_tables").empty();
+
+                    const ul = document.getElementById("ticker_list_by_tables");
+                    const symbol = data["symbol"]
+                    data.forEach((ticker, i) => {
+                        let d = {symbol: ticker[0], name: ticker[1]};
+
+                        const li = document.createElement("li");
+                        li.innerHTML = `${d.name} (Ticker Code: ${d.symbol}) <button class = "switchChart" data-index = ${i} >Open Chart</button> <button class = "dropProduct" data-index = ${i} >Delete</button>`;
+
+                        ul.appendChild(li);
+                        config.portfolio.tickers.push(d);
+                    });
+
+                    if(config.portfolio.tickers.length == 0){
+                        config.candlestick.sy
+                    }
                 })
             }
 
 
             //キャンドルデータをバックエンドから取ってきてそれを描画する関数を実行
             function sendCandleData(){
+                if(config.candlestick.symbol == "" || config.candlestick.name == "") return;
                 // enableがfalseの場合はAJAXがデータを取ってこないようにする
                 //if(!config.api.enable) return
                 //以下で辞書paramsに任意のフィールドを設定してあげる
                 //→そのフィールドをもとにバックエンドがrequestポインタを通じてデータを取ってくる
                 var params = {
                     "symbol": config.candlestick.symbol,
+                    "name": config.candlestick.name,
                     "limit": config.candlestick.limit,
                     "duration": config.candlestick.duration,
                 }
@@ -429,18 +501,18 @@
                     }
                     
                     if (data['rsi'] != undefined ){
-                    config.dataTable.index += 1;
-                    config.rsi.indices['up'] = config.dataTable.index;
-                    config.dataTable.index += 1;
-                    config.rsi.indices['value'] = config.dataTable.index;
-                    config.dataTable.index += 1;
-                    config.rsi.indices['down'] = config.dataTable.index;
-                    config.rsi.period = data['rsi']['period'];
-                    config.rsi.values = data['rsi']['values'];
-                    dataTable.addColumn('number', 'RSI Thread');
-                    dataTable.addColumn('number', 'RSI(' + config.rsi.period + ')');
-                    dataTable.addColumn('number', 'RSI Thread');
-                }
+                        config.dataTable.index += 1;
+                        config.rsi.indices['up'] = config.dataTable.index;
+                        config.dataTable.index += 1;
+                        config.rsi.indices['value'] = config.dataTable.index;
+                        config.dataTable.index += 1;
+                        config.rsi.indices['down'] = config.dataTable.index;
+                        config.rsi.period = data['rsi']['period'];
+                        config.rsi.values = data['rsi']['values'];
+                        dataTable.addColumn('number', 'RSI Thread');
+                        dataTable.addColumn('number', 'RSI(' + config.rsi.period + ')');
+                        dataTable.addColumn('number', 'RSI Thread');
+                    }
                     var googleChartData = [];
                     var candles = data["candles"];
 
@@ -532,9 +604,18 @@
                 sendCandleData();
             }
 
-            //setInterval(send, 1000*3)
+                
+            function displayProductName(){
+                document.getElementById("display_product_name").innerText = `${config.candlestick.name}`;
+            }
+
+
             window.onload = function (){
-                sendCandleData()
+                switchChart();
+                displayPortfolio();
+                //現在表示しているチャートの商品名を記載
+                displayProductName();
+
                 //カーソルがチャート上に乗った場合にenableがfalseになる
                 //$('#dashboard_div').mouseenter(function() {
                     //config.api.enable = false;
@@ -636,25 +717,46 @@
                 });
 
                 $("#input_ticker_keyword").change(function(){
+                    config.tickersBySearch.tickers = [];
                     if(this.value.length > 0) sendTickerKeyword(this.value);
+                    else $("#ticker_list").empty();
                 })
 
                 //ティッカーリスト内のボタンを押した時に表示されるモーダル
                 $(document).on("click", ".open-modal", function(){
                     let index = $(this).data("index");
-                    let symbol = config.tickersBySearch[index]["1. symbol"]
-                    let name = config.tickersBySearch[index]["2. name"];
+                    let symbol = config.tickersBySearch.tickers[index]["1. symbol"]
+                    let name = config.tickersBySearch.tickers[index]["2. name"];
                     $("#modal-content").html(`URL: <a href = "google.com">${name}</a>`);
                     $("#modal-content").append(
                         `<h3>Name: ${name}</h3`+
                         "<p>Look Details of this product</p>"+
-                        `<button onclick='getTicker("${symbol}")'>Open Chart</button>`)
+                        `<button onclick='getTicker("${symbol}", "${name}")'>Open Chart</button>`)
                     $("#myModal").show();
                 });
 
                 //モーダルのクローズ
                 $(".close").click(function(){
                     $("#myModal").hide();
+                }); 
+
+                //ポートフォリオ内でのOpen Chartを押してチャートを切り替える
+                $(document).on("click", ".switchChart", function(){
+                    let index = $(this).data("index");
+                    let name = config.portfolio.tickers[index].name;
+                    let symbol = config.portfolio.tickers[index].symbol;
+                    switchChart(name, symbol);
+                    displayProductName();
+                    sendCandleData();
+                });
+
+                //ポートフォリオ内でのDeleteを押してポートフォリオから削除
+                $(document).on("click", ".dropProduct", function(){
+                    let index = $(this).data("index");
+                    let symbol = config.portfolio.tickers[index].symbol;
+                    deleteCandleTable(index, symbol);
+                    displayProductName();
+                    sendCandleData();
                 });
 
             }
@@ -665,6 +767,7 @@
             <input type="text" id="input_ticker_keyword">
         </div>
         <ul id="ticker_list"></ul>
+        <ul id="ticker_list_by_tables"></ul>
         <div id="myModal" class="modal">
             <div class="modal-content">
                 <span class="close">&times;</span>
@@ -677,20 +780,20 @@
         </div>
         <div>
             SMA <input type="checkbox" id="inputSma">
-            Period <input type="text" id="inputSmaPeriod1" value="7" style="...">
-            <input type="text" id="inputSmaPeriod2" value="14" style="...">
-            <input type="text" id="inputSmaPeriod3" value="50" style="...">
+            Period <input type="text" id="inputSmaPeriod1" value="7">
+            <input type="text" id="inputSmaPeriod2" value="14">
+            <input type="text" id="inputSmaPeriod3" value="50">
         </div>
         <div>
             EMA <input type="checkbox" id="inputEma">
-            Period <input type="text" id="inputEmaPeriod1" value="7" style="...">
-            <input type="text" id="inputEmaPeriod2" value="14" style="...">
-            <input type="text" id="inputEmaPeriod3" value="50" style="...">
+            Period <input type="text" id="inputEmaPeriod1" value="7">
+            <input type="text" id="inputEmaPeriod2" value="14">
+            <input type="text" id="inputEmaPeriod3" value="50">
         </div>
         <div>
             BBands <input type="checkbox" id="inputBBands">
-            N <input type="text" id="inputBBandsN" value="20" style="...">
-            K <input type="text" id="inputBBandsK" value="2" style="...">
+            N <input type="text" id="inputBBandsN" value="20">
+            K <input type="text" id="inputBBandsK" value="2">
         </div>
         <div>
             Volume <input type="checkbox" id="inputVolume">
@@ -703,6 +806,7 @@
             Events <input type="checkbox" id="inputEvents"> <div id="profit"></div>
         </div>
         <div id="dashboard_div">
+            <h2 id = "display_product_name">Name: </h2>
             <div id="chart_div"></div>
             <div id="technical_div"></div>
             <div id="filter_div"></div>
