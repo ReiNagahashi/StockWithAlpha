@@ -50,7 +50,6 @@ func GetCandleTableNames() [][]string{
 
 		symbol := strings.Split(tableName, "_")
 		if len(symbol) > 1 && symbol[1] == "24h0m0s"{
-			fmt.Println(tableName)
 			// テーブル名をもとにキャンドルデータのnameを取ってくる
 			idToFetch := 1 
 			// SQLクエリを構築
@@ -71,7 +70,7 @@ func GetCandleTableNames() [][]string{
 	return tableNames
 }
 
-// キャンドルテーブルを作成(日足)
+// キャンドル・ランキング・トレードパラムズテーブルを作成(日足)
 func CreateTableBySymbol(symbol, name string){
 		// キャンドルデータのテーブル
 		tableName := GetCandleTableName(symbol, config.Day)
@@ -92,7 +91,41 @@ func CreateTableBySymbol(symbol, name string){
 			log.Fatalln(err)
 		}
 
-		fmt.Println("Table created successfully!")
+	// 取引アルゴリズムのインディケーターを保存するdb
+	paramsTableName := fmt.Sprintf("%s_params", symbol)
+
+	cmd := fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		time DATETIME UNIQUE,
+		emaEnable BOOL,
+		emaPeriod1 INTEGER,
+		emaPeriod2 INTEGER,
+		bbEnable BOOL,
+		bbN INTEGER,
+		bbK FLOAT,
+		rsiEnable BOOL,
+		rsiPeriod INTEGER,
+		rsiBuyThread FLOAT,
+		rsiSellThread FLOAT
+	)`, paramsTableName)
+	_, err = DbConnection.Exec(cmd)
+	if err != nil{
+		log.Fatalln(err)
+	}
+
+	rankingTableName := GetRankingTableName(symbol)
+
+	cmd = fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		time DATETIME,
+		name STRING,
+		ranking INTEGER,
+		performance FLOAT
+	)`, rankingTableName)
+	_, err = DbConnection.Exec(cmd)
+	if err != nil{
+		log.Fatalln(err)
+	}
 }
 
 
@@ -141,64 +174,5 @@ func init(){
 	if err != nil{
 		log.Fatalln(err)
 	}
-	
-	// キャンドルデータのテーブル
-	for _, duration := range config.Config.Durations{
-		tableName := GetCandleTableName(config.Config.Symbol, duration)
-
-		c := fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			time DATETIME UNIQUE NOT NULL,
-			name TEXT,
-			open FLOAT,
-			close FLOAT,
-			high FLOAT,
-			low FLOAT,
-			volume FLOAT
-		)`, tableName)
-		_, err = DbConnection.Exec(c)
-		if err != nil{
-			log.Fatalln(err)
-		}
-	}
-
-	
-
-	// 取引アルゴリズムのインディケーターを保存するdb
-	paramsTableName := fmt.Sprintf("%s_params", config.Config.Symbol)
-
-	cmd = fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		time DATETIME UNIQUE,
-		emaEnable BOOL,
-		emaPeriod1 INTEGER,
-		emaPeriod2 INTEGER,
-		bbEnable BOOL,
-		bbN INTEGER,
-		bbK FLOAT,
-		rsiEnable BOOL,
-		rsiPeriod INTEGER,
-		rsiBuyThread FLOAT,
-		rsiSellThread FLOAT
-	)`, paramsTableName)
-	_, err = DbConnection.Exec(cmd)
-	if err != nil{
-		log.Fatalln(err)
-	}
-
-	rankingTableName := GetRankingTableName(config.Config.Symbol)
-
-	cmd = fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		time DATETIME,
-		name STRING,
-		ranking INTEGER,
-		performance FLOAT
-	)`, rankingTableName)
-	_, err = DbConnection.Exec(cmd)
-	if err != nil{
-		log.Fatalln(err)
-	}
-
 
 }

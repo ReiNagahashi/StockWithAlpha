@@ -3,7 +3,6 @@ package models
 import (
 	"fmt"
 	"log"
-	"stock-with-alpha/config"
 	"time"
 )
 
@@ -27,14 +26,14 @@ func GetTradeParamsTableName(symbol string) string{
 }
 
 
-func (tp *TradeParams) CreateTradeParams() error{
-	currentParams:= GetTradeParams()
+func (tp *TradeParams) CreateTradeParams(symbol string) error{
+	currentParams:= GetTradeParams(symbol)
 
 	if currentParams != nil{
 		return nil
 	}
 
-	cmd := fmt.Sprintf("INSERT INTO %s (emaEnable, emaPeriod1, emaPeriod2, bbEnable, bbN, bbK, rsiEnable, rsiPeriod, rsiBuyThread, rsiSellThread, time) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", GetTradeParamsTableName(config.Config.Symbol))
+	cmd := fmt.Sprintf("INSERT INTO %s (emaEnable, emaPeriod1, emaPeriod2, bbEnable, bbN, bbK, rsiEnable, rsiPeriod, rsiBuyThread, rsiSellThread, time) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", GetTradeParamsTableName(symbol))
 	_, err := DbConnection.Exec(cmd, tp.EmaEnable, tp.EmaPeriod1, tp.EmaPeriod2, tp.BbEnable, tp.BbN, tp.BbK, tp.RsiEnable, tp.RsiPeriod, tp.RsiBuyThread, tp.RsiSellThread, tp.Time)
 	if err != nil{
 		return err
@@ -44,8 +43,8 @@ func (tp *TradeParams) CreateTradeParams() error{
 }
 
 
-func GetTradeParams() *TradeParams{
-	tableName := GetTradeParamsTableName(config.Config.Symbol)
+func GetTradeParams(symbol string) *TradeParams{
+	tableName := GetTradeParamsTableName(symbol)
 	cmd := fmt.Sprintf(`SELECT emaEnable, emaPeriod1, emaPeriod2, bbEnable, bbN, bbK, rsiEnable, rsiPeriod, rsiBuyThread, rsiSellThread, time FROM %s WHERE time = ?`, tableName)
 	row := DbConnection.QueryRow(cmd, time.Now().Format("2008-01-01"))
 	
@@ -73,18 +72,18 @@ func GetRankingTableName(symbol string) string{
 }
 
 
-func (r *Ranking) CreateRanking() (bool, error){
+func (r *Ranking) CreateRanking(symbol string) (bool, error){
 	parsedDate, err := time.Parse("2006-01-02", time.Now().Format("2006-01-02"))
 	if err != nil {
 		log.Fatalln("Error parsing date:", err)
 	}
-	currentRanking := GetRanking(parsedDate, r.Name)
+	currentRanking := GetRanking(symbol, parsedDate, r.Name)
 
 	if currentRanking != nil{
 		return false, nil
 	}
 
-	cmd := fmt.Sprintf("INSERT INTO %s (name, performance, ranking, time) VALUES(?, ?, ?, ?)", GetRankingTableName(config.Config.Symbol))
+	cmd := fmt.Sprintf("INSERT INTO %s (name, performance, ranking, time) VALUES(?, ?, ?, ?)", GetRankingTableName(symbol))
 	_, err = DbConnection.Exec(cmd, r.Name, r.Performance, r.Ranking, parsedDate)
 	if err != nil{
 		return false, err
@@ -94,8 +93,8 @@ func (r *Ranking) CreateRanking() (bool, error){
 }
 
 
-func GetRanking(date time.Time, name string) *Ranking{
-	tableName := GetRankingTableName(config.Config.Symbol)
+func GetRanking(symbol string, date time.Time, name string) *Ranking{
+	tableName := GetRankingTableName(symbol)
 
 	cmd := fmt.Sprintf(`SELECT name, performance, ranking, time FROM %s WHERE time = ? AND name = ?`, tableName)
 	row := DbConnection.QueryRow(cmd, date, name)

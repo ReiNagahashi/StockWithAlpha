@@ -11,12 +11,11 @@ import (
 
 type AI struct{
 	API 					*alpha.APIClient
-	Symbol 					string
 	UsePercent 				float64
 	Duration 				time.Duration
 	PastPeriod 				int
-	SignalEvents 			*models.SignalEvents
-	OptimizedTradeParams 	*models.TradeParams
+	SignalEvents 			map[string]*models.SignalEvents
+	OptimizedTradeParams 	map[string]*models.TradeParams
 	StopLimit 				float64
 	StopLimitPercent 		float64
 	BackTest 				bool
@@ -27,42 +26,52 @@ type AI struct{
 var Ai *AI
 
 
-func NewAI(symbol string, duration time.Duration, pastPeriod int, usePercent, stopLimitPercent float64, backTest bool) *AI{
+func NewAI(duration time.Duration, pastPeriod int, usePercent, stopLimitPercent float64, backTest bool) *AI{
 	apiClient := alpha.New(config.Config.ApiKey)
-	var signalEvents *models.SignalEvents
+	// var signalEvents *models.SignalEvents
 
-	if backTest{
-		signalEvents = models.NewSignalEvents()
-	}else{
-		signalEvents = models.GetSignalEventsByCount(1)
-	}
+	// signalEvents = models.NewSignalEvents()
+
+	// if backTest{
+	// 	signalEvents = models.NewSignalEvents()
+	// }else{
+	// 	signalEvents = models.GetSignalEventsByCount(1)
+	// }
 
 	Ai = &AI{
 		API: apiClient,
-		Symbol: symbol,
 		UsePercent: usePercent,
 		PastPeriod: pastPeriod,
 		Duration: duration,
-		SignalEvents: signalEvents,
+		SignalEvents: make(map[string]*models.SignalEvents),
+		OptimizedTradeParams: make(map[string]*models.TradeParams),
 		BackTest: backTest,
 		StartTrade: time.Now().UTC(),
 		StopLimitPercent: stopLimitPercent,
 	}
 
-	Ai.UpdateOptimizeParams()
+	tableNames := models.GetCandleTableNames()
+	for i := 0; i < len(tableNames);i++{
+		var signalEvents *models.SignalEvents
+		signalEvents = models.NewSignalEvents()
+		symbol := tableNames[i][0]
+		product_name := tableNames[i][1]
+		Ai.SignalEvents[symbol] = signalEvents
+		Ai.UpdateOptimizeParams(symbol, product_name)
+	}
 
 	return Ai
 } 
 
-func (ai *AI) UpdateOptimizeParams(){
-	df, _ := models.GetAllCandle(ai.Symbol,"", ai.Duration, ai.PastPeriod)
-	ai.OptimizedTradeParams = df.OptimizeParams()
+func (ai *AI) UpdateOptimizeParams(symbol, product_name string){
+	df, _ := models.GetAllCandle(symbol,product_name, ai.Duration, ai.PastPeriod)
+	ai.OptimizedTradeParams[symbol] = df.OptimizeParams()
 }
 
 
-func (ai *AI) Buy(candle models.Candle) (childOrderAcceptanceID string, isOrderCompleted bool){
+func (ai *AI) Buy(symbol string, candle models.Candle) (childOrderAcceptanceID string, isOrderCompleted bool){
 	if ai.BackTest{
-		couldBuy := ai.SignalEvents.Buy(ai.Symbol, candle.DateTime, candle.Close, 1.0, false)
+		couldBuy := ai.SignalEvents[symbol].Buy(symbol, candle.DateTime, candle.Close, 1.0, false)
 		return "", couldBuy
 	}
 
@@ -70,9 +79,9 @@ func (ai *AI) Buy(candle models.Candle) (childOrderAcceptanceID string, isOrderC
 }
 
 
-func (ai *AI) Sell(candle models.Candle) (childOrderAcceptanceID string, isOrderCompleted bool){
+func (ai *AI) Sell(symbol string, candle models.Candle) (childOrderAcceptanceID string, isOrderCompleted bool){
 	if ai.BackTest{
-		couldSell := ai.SignalEvents.Sell(ai.Symbol, candle.DateTime, candle.Close, 1.0, false)
+		couldSell := ai.SignalEvents[symbol].Sell(symbol, candle.DateTime, candle.Close, 1.0, false)
 
 		return "", couldSell
 	}
@@ -81,9 +90,9 @@ func (ai *AI) Sell(candle models.Candle) (childOrderAcceptanceID string, isOrder
 }
 
 
-func (ai *AI) Trade(){
-	params := ai.OptimizedTradeParams
-	df, _ := models.GetAllCandle(ai.Symbol,"", ai.Duration, ai.PastPeriod)
+func (ai *AI) Trade(symbol, name string){
+	params := ai.OptimizedTradeParams[symbol]
+	df, _ := models.GetAllCandle(symbol, name, ai.Duration, ai.PastPeriod)
 	lenCandles := len(df.Candles)
 
 	var emaValues1 []float64
@@ -136,21 +145,23 @@ func (ai *AI) Trade(){
 		}
 
 		if buyPoint > 0{
-			_, isCompleted := ai.Buy(df.Candles[i])
+			_, isCompleted := ai.Buy(df.Symbol, df.Candles[i])
 			if !isCompleted{
 				continue
 			}
 			//stopLimitPercentの比率だけ購入時の値段(終値)にかけた値をStoplimitとする→stopLimitを下回ったら自動で売りに抱える
 			ai.StopLimit = df.Candles[i].Close * ai.StopLimitPercent
+
 		}
 
 		if sellPoint > 0 || df.Candles[i].Close < ai.StopLimit{
-			_, isCompleted := ai.Sell(df.Candles[i])
+			_, isCompleted := ai.Sell(df.Symbol, df.Candles[i])
 			if !isCompleted{
 				continue
 			}
 			ai.StopLimit = 0.0
-			ai.UpdateOptimizeParams()
+			ai.OptimizedTradeParams[df.Symbol] = df.OptimizeParams()
+
 		}
 
 	}

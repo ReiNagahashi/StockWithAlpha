@@ -160,7 +160,7 @@ func apiCandleHandler(w http.ResponseWriter, r *http.Request){
 
 	if r.URL.Query().Get("events") != ""{
 		if config.Config.BackTest{
-			df.Events = Ai.SignalEvents
+			df.Events = Ai.SignalEvents[df.Symbol]
 		}else{
 			firstTime := df.Candles[0].DateTime
 			df.AddEvents(firstTime)
@@ -229,7 +229,6 @@ func ingestionCandleApiMakeHandler(fn func(http.ResponseWriter, *http.Request)) 
 func ingestionCandleHandler(w http.ResponseWriter, r *http.Request) {
 	symbol := r.URL.Query().Get("symbol")
 	name := r.URL.Query().Get("name")
-	fmt.Println(symbol)
 	if symbol == "" || name == "" {
 		APIError(w, "No Symbol or Name!", http.StatusBadRequest)
 	}
@@ -264,7 +263,6 @@ func dropCandleTableApiMakeHandler(fn func(http.ResponseWriter, *http.Request)) 
 func dropCandleTable(w http.ResponseWriter, r *http.Request) {
 	symbol := r.URL.Query().Get("symbol")
 
-	fmt.Println(symbol)
 	if symbol == ""{
 		APIError(w, "No Symbol or Name!", http.StatusBadRequest)
 	}

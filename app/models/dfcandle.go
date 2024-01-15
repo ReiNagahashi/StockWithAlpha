@@ -219,7 +219,7 @@ func (df *DataFrameCandle) OptimizeEma() (performance float64, bestPeriod1, best
 	bestPeriod2 = 14
 
 	for period1 := 5; period1 < 11; period1++{
-		for period2 := 14; period2 < 20; period2++{
+		for period2 := 14; period2 < 50; period2++{
 			signalEvents := df.BacktestEma(period1, period2)
 			if signalEvents == nil{
 				continue
@@ -267,7 +267,7 @@ func (df *DataFrameCandle) OptimizeBb() (performance float64, bestN int, bestK f
 	bestK = 2.0
 
 	for n := 10; n < 30; n++{
-		for k := 1.9; k < 2.1; k += 0.1{
+		for k := 1.1; k < 3.0; k += 0.1{
 			signalEvents := df.BacktestBb(n, k)
 			if signalEvents == nil{
 				continue
@@ -316,7 +316,7 @@ func (df *DataFrameCandle) OptimizeRsi() (performance float64, bestPeriod int, b
 	buyThread = 30.0
 	sellThread = 70.0
 
-	for period := 11; period < 30; period++{
+	for period := 11; period < 50; period++{
 		signalEvents := df.BacktestRsi(period, buyThread, sellThread)
 		profit := signalEvents.Profit()
 		if profit > performance{
@@ -370,7 +370,7 @@ func (df *DataFrameCandle) OptimizeParams() *TradeParams{
 			rankings[i].IsEnable = true
 		}
 		// isCreatedがtrueの時は新たにrankingデータがdbに作られたことを意味する→paramsもデータを挿入する必要がある
-		isCreated, err := rankings[i].CreateRanking()
+		isCreated, err := rankings[i].CreateRanking(df.Symbol)
 		if err != nil{
 			log.Fatalln(err)
 		}
@@ -397,7 +397,7 @@ func (df *DataFrameCandle) OptimizeParams() *TradeParams{
 	}
 
 	if canCreate{
-		tradeParams.CreateTradeParams()
+		tradeParams.CreateTradeParams(df.Symbol)
 	}
 
 	return &tradeParams

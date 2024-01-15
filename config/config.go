@@ -21,6 +21,10 @@ type ConfigList struct{
 	DataLimit 			int
 	StopLimitPercent 	float64
 	NumRanking 			int
+
+	SmtpHostName 		string
+	SmtpPort 			int
+	Email 				string
 }
 
 
@@ -58,5 +62,8 @@ func init(){
 		DataLimit: cfg.Section("stockWithAlpha").Key("data_limit").MustInt(),
 		StopLimitPercent: cfg.Section("stockWithAlpha").Key("stop_limit_percent").MustFloat64(),
 		NumRanking: cfg.Section("stockWithAlpha").Key("num_ranking").MustInt(),
+		SmtpHostName: cfg.Section("stockWithAlpha").Key("host").String(),
+		SmtpPort: cfg.Section("stockWithAlpha").Key("port").MustInt(),
+		Email: cfg.Section("stockWithAlpha").Key("email").String(),
 	}
 }

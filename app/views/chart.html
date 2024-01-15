@@ -490,7 +490,6 @@
                         config.events.values = data['events']['signals'];
 
                         config.events.first = config.events.values.shift();
-
                         dataTable.addColumn('number', 'Marker');
                         dataTable.addColumn({type:'string', role:'annotation'});
 
@@ -571,6 +570,7 @@
                                 datas.push(null);
                             } else if(event.time == candle.date_time){
                                 // candle.high + 1　とすることで、SELL, BUYのシンボルがキャンドルの少し上で表示させられる
+                                console.log(event);
                                 datas.push(candle.high + 1);
                                 datas.push(event.side);
                                 config.events.first = config.events.values.shift();
