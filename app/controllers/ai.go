@@ -1,6 +1,8 @@
 package controllers
 
 import (
+	"fmt"
+	"log"
 	"stock-with-alpha/alpha"
 	"stock-with-alpha/app/models"
 	"stock-with-alpha/config"
@@ -152,6 +154,21 @@ func (ai *AI) Trade(symbol, name string){
 			//stopLimitPercentの比率だけ購入時の値段(終値)にかけた値をStoplimitとする→stopLimitを下回ったら自動で売りに抱える
 			ai.StopLimit = df.Candles[i].Close * ai.StopLimitPercent
 
+			parsedDateNow := time.Now().Format("2006-01-02")
+			parsedCandleDate := df.Candles[i].DateTime.Format("2006-01-02")
+
+			if parsedDateNow == parsedCandleDate {
+				body_content := fmt.Sprintf("Product name : %s(%s)", df.Symbol, df.Name)
+				email := EmailTemplate{
+					Subject: "Buy Signal",
+					Body: body_content,
+				}
+				err := email.Send(config.Config.Email)
+
+				if err != nil{
+					log.Println(err)
+				}
+			}
 		}
 
 		if sellPoint > 0 || df.Candles[i].Close < ai.StopLimit{
@@ -162,6 +179,20 @@ func (ai *AI) Trade(symbol, name string){
 			ai.StopLimit = 0.0
 			ai.OptimizedTradeParams[df.Symbol] = df.OptimizeParams()
 
+			subject_content := fmt.Sprintf("You may have profit by selling today!")
+			body_content := fmt.Sprintf("Product name : %s(%s)", df.Symbol, df.Name)
+			if df.Candles[i].Close < ai.StopLimit{
+				subject_content = fmt.Sprintf("This is a stop-limit signal")
+			}
+			email := EmailTemplate{
+				Subject: subject_content,
+				Body: body_content,
+			}
+			err := email.Send(config.Config.Email)
+
+			if err != nil{
+				log.Println(err)
+			}
 		}
 
 	}
