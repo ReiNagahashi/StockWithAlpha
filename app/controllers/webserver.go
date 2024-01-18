@@ -10,6 +10,7 @@ import (
 	"stock-with-alpha/alpha"
 	"stock-with-alpha/app/models"
 	"stock-with-alpha/config"
+	"stock-with-alpha/utils"
 	"strconv"
 )
 
@@ -238,11 +239,11 @@ func ingestionCandleHandler(w http.ResponseWriter, r *http.Request) {
 	// symbolの名前でテーブルを作成
 	models.CreateTableBySymbol(symbol, name)
 	
+	errChan := make(chan error)
 	// ティッカーをAPIで持ってきて構造体にする。その後にテーブルにティッカーに基づいて作られたキャンドルデータを挿入
-	err := apiClient.GetDailyTicker(symbol, name, "TIME_SERIES_DAILY", config.Config.Durations["day"])
-	if err != nil{
-		log.Println("Failed to ingestion data for daily...")
-	}
+	go apiClient.GetDailyTicker(symbol, name, "TIME_SERIES_DAILY", config.Config.Durations["day"], errChan)
+
+	go utils.ErrorHandler(errChan)
 }
 
 
@@ -269,7 +270,6 @@ func dropCandleTable(w http.ResponseWriter, r *http.Request) {
 
 	// symbolを基にテーブルを削除
 	models.DropTableBySymbol(symbol)
-	
 }
 
 

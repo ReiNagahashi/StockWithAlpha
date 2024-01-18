@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"net/url"
 	"stock-with-alpha/app/models"
@@ -118,16 +117,16 @@ type ResponseDaily struct {
 	Ticker 			 map[string]TimeSeriesEntry `json:"Time Series (Daily)"`
 }
 
-func (api *APIClient) GetDailyTicker(symbol, name, f string, duration time.Duration) error{
+func (api *APIClient) GetDailyTicker(symbol, name, f string, duration time.Duration, ch chan <- error) {
 	resp, err := api.doRequest("GET", "", map[string]string{"symbol": symbol, "function": f, "apikey": config.Config.ApiKey}, nil)
 	if err != nil{
-		return err
+		ch <- err
 	}
 	
 	var response = ResponseDaily{}
 	
 	if err := json.Unmarshal([]byte(resp), &response); err != nil {
-		return err
+		ch <- err
 	}
 
 	for date, data := range response.Ticker {
@@ -142,7 +141,7 @@ func (api *APIClient) GetDailyTicker(symbol, name, f string, duration time.Durat
 
 		parsedDate, err := time.Parse("2006-01-02", datePart)
 		if err != nil {
-			log.Println("Error parsing date:", err)
+			ch <- err
 		}
 		
 		candle := models.Candle{
@@ -157,12 +156,9 @@ func (api *APIClient) GetDailyTicker(symbol, name, f string, duration time.Durat
 			DateTime: parsedDate,
 		}
 
-
 		models.CreateCandleWithDuration(candle, symbol, name, parsedDate, duration)
 
 	}
-	
-	return nil
 }
 
 

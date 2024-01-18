@@ -181,17 +181,24 @@ func (ai *AI) Trade(symbol, name string){
 
 			subject_content := fmt.Sprintf("You may have profit by selling today!")
 			body_content := fmt.Sprintf("Product name : %s(%s)", df.Symbol, df.Name)
+
 			if df.Candles[i].Close < ai.StopLimit{
 				subject_content = fmt.Sprintf("This is a stop-limit signal")
 			}
-			email := EmailTemplate{
-				Subject: subject_content,
-				Body: body_content,
-			}
-			err := email.Send(config.Config.Email)
 
-			if err != nil{
-				log.Println(err)
+			parsedDateNow := time.Now().Format("2006-01-02")
+			parsedCandleDate := df.Candles[i].DateTime.Format("2006-01-02")
+
+			if parsedDateNow == parsedCandleDate {
+				email := EmailTemplate{
+					Subject: subject_content,
+					Body: body_content,
+				}
+				err := email.Send(config.Config.Email)
+
+				if err != nil{
+					log.Println(err)
+				}
 			}
 		}
 
