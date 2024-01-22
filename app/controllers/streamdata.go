@@ -10,7 +10,7 @@ import (
 
 func StreamIngestionData(){
 	c := config.Config
-	// ここでAIには日足・週足のどっちで取引させるのかを決める
+// ここでAIには日足・週足のどっちで取引させるのかを決める
 	tableNames := models.GetCandleTableNames()
 	Ai := NewAI(config.Day, c.DataLimit, c.UsePercent, c.StopLimitPercent, c.BackTest)
 

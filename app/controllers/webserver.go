@@ -12,6 +12,7 @@ import (
 	"stock-with-alpha/config"
 	"stock-with-alpha/utils"
 	"strconv"
+	"sync"
 )
 
 var templates = template.Must(template.ParseFiles("app/views/chart.html"))
@@ -177,7 +178,6 @@ func apiCandleHandler(w http.ResponseWriter, r *http.Request){
 	w.Write(js)
 }
 
-
 // ティッカー検索API用の正規表現
 var tickerSearchApiValidPath = regexp.MustCompile("^/api/ticker_search/?$")
 func tickerSearchApiMakeHandler(fn func(http.ResponseWriter, *http.Request)) http.HandlerFunc{
@@ -213,7 +213,6 @@ func tickerSearchHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(js)
 }
 
-
 // ingestionCandle: 引数としてのティッカー情報をもとにテーブルを作る関数
 var ingestionCandleApiValidPath = regexp.MustCompile("^/api/ingestion_candle/$")
 func ingestionCandleApiMakeHandler(fn func(http.ResponseWriter, *http.Request)) http.HandlerFunc{
@@ -239,14 +238,23 @@ func ingestionCandleHandler(w http.ResponseWriter, r *http.Request) {
 	// symbolの名前でテーブルを作成
 	models.CreateTableBySymbol(symbol, name)
 	
+	var wg sync.WaitGroup
+	wg.Add(2)
 	errChan := make(chan error)
 	// ティッカーをAPIで持ってきて構造体にする。その後にテーブルにティッカーに基づいて作られたキャンドルデータを挿入
-	go apiClient.GetDailyTicker(symbol, name, "TIME_SERIES_DAILY", config.Config.Durations["day"], errChan)
+	go func(){
+		defer wg.Done()
+		apiClient.GetDailyTicker(symbol, name, "TIME_SERIES_DAILY", config.Config.Durations["day"], errChan)
+	}()
 
-	go utils.ErrorHandler(errChan)
+	go func(){
+		defer wg.Done()
+		utils.ErrorHandler(errChan)
+	}()
+
+	wg.Wait()
+
 }
-
-
 
 // dropCandleTable: 引数としてのシンボルをもとにテーブルを削除する関数
 var dropCandleTableApiValidPath = regexp.MustCompile("^/api/drop_candle_table/$")
@@ -289,7 +297,7 @@ func displayCandleTablesApiMakeHandler(fn func(http.ResponseWriter, *http.Reques
 func displayCandleTablesHandler(w http.ResponseWriter, r *http.Request) {
 	// 日足の既存のテーブル名を全て取得
 	symbolWithName := models.GetCandleTableNames()
-
+	
 	js, err := json.Marshal(symbolWithName)
 	if err != nil{
 		http.Error(w, err.Error(), http.StatusInternalServerError)

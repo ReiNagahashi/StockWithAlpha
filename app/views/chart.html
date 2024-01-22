@@ -299,6 +299,7 @@
                 $("#ticker_list").empty();
 
                 $.get("/api/ticker_search/", param).done(function(data){
+                    console.log(data)
                     config.tickersBySearch.tickers = data["bestMatches"];
 
                     config.tickersBySearch.tickers.forEach((ticker, i) => {
@@ -311,7 +312,7 @@
                 })
             }
 
-            // ティッカー検索欄から選んだティッカーのキャンドルテーブルを作ってキャンドルデータを入れた上でポートフォリオに保存する
+            // テーブルを作ってキャンドルデータを入れた上でポートフォリオに保存する
             function getTicker(symbol, name){
                 config.candlestick.symbol = symbol;
                 config.candlestick.name = name;
@@ -365,6 +366,8 @@
                 //dataはsymbol, nameを持った配列を持つ
                 $.get("/api/display_tables/").done(function(data){
                     $("#ticker_list_by_tables").empty();
+
+                    if(data == null) return;
 
                     const ul = document.getElementById("ticker_list_by_tables");
                     const symbol = data["symbol"]

@@ -231,7 +231,7 @@ func (api *APIClient) GetTickerInfo(f, keyword string) (*TickerByKeyword, error)
 	}
 	
 	var response = TickerByKeyword{}
-	
+
 	if err := json.Unmarshal([]byte(resp), &response); err != nil {
 		return nil, err
 	}

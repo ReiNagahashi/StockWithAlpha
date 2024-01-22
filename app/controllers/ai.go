@@ -51,7 +51,7 @@ func NewAI(duration time.Duration, pastPeriod int, usePercent, stopLimitPercent 
 		StartTrade: time.Now().UTC(),
 		StopLimitPercent: stopLimitPercent,
 	}
-
+	
 	tableNames := models.GetCandleTableNames()
 	for i := 0; i < len(tableNames);i++{
 		var signalEvents *models.SignalEvents
@@ -179,27 +179,27 @@ func (ai *AI) Trade(symbol, name string){
 			ai.StopLimit = 0.0
 			ai.OptimizedTradeParams[df.Symbol] = df.OptimizeParams()
 
-			subject_content := fmt.Sprintf("You may have profit by selling today!")
-			body_content := fmt.Sprintf("Product name : %s(%s)", df.Symbol, df.Name)
+			// subject_content := fmt.Sprintf("You may have profit by selling today!")
+			// body_content := fmt.Sprintf("Product name : %s(%s)", df.Symbol, df.Name)
 
-			if df.Candles[i].Close < ai.StopLimit{
-				subject_content = fmt.Sprintf("This is a stop-limit signal")
-			}
+			// if df.Candles[i].Close < ai.StopLimit{
+			// 	subject_content = fmt.Sprintf("This is a stop-limit signal")
+			// }
 
-			parsedDateNow := time.Now().Format("2006-01-02")
-			parsedCandleDate := df.Candles[i].DateTime.Format("2006-01-02")
+			// parsedDateNow := time.Now().Format("2006-01-02")
+			// parsedCandleDate := df.Candles[i].DateTime.Format("2006-01-02")
 
-			if parsedDateNow == parsedCandleDate {
-				email := EmailTemplate{
-					Subject: subject_content,
-					Body: body_content,
-				}
-				err := email.Send(config.Config.Email)
+			// if parsedDateNow == parsedCandleDate {
+			// 	email := EmailTemplate{
+			// 		Subject: subject_content,
+			// 		Body: body_content,
+			// 	}
+			// 	err := email.Send(config.Config.Email)
 
-				if err != nil{
-					log.Println(err)
-				}
-			}
+			// 	if err != nil{
+			// 		log.Println(err)
+			// 	}
+			// }
 		}
 
 	}
