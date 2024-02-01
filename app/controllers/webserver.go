@@ -254,6 +254,8 @@ func ingestionCandleHandler(w http.ResponseWriter, r *http.Request) {
 
 	wg.Wait()
 
+	Ai.Trade(symbol, name)
+
 }
 
 // dropCandleTable: 引数としてのシンボルをもとにテーブルを削除する関数
@@ -295,9 +297,10 @@ func displayCandleTablesApiMakeHandler(fn func(http.ResponseWriter, *http.Reques
 
 
 func displayCandleTablesHandler(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("HELLOO----------")
 	// 日足の既存のテーブル名を全て取得
 	symbolWithName := models.GetCandleTableNames()
-	
+	fmt.Println("WORLD----------")
 	js, err := json.Marshal(symbolWithName)
 	if err != nil{
 		http.Error(w, err.Error(), http.StatusInternalServerError)

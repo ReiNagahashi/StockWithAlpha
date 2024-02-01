@@ -9,6 +9,8 @@ import (
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
 )
 
 const (
@@ -17,6 +19,7 @@ const (
 
 var DbConnection *sql.DB
 
+var Goram_db *gorm.DB
 
 func GetCandleTableName(symbol string, duration time.Duration) string{
 	return fmt.Sprintf("%s_%s", symbol, duration)
@@ -161,6 +164,12 @@ func init(){
 	if err != nil{
 		log.Fatalln(err)
 	}
+
+	Goram_db, err = gorm.Open(sqlite.Open(config.Config.DbName), &gorm.Config{})
+	if err != nil{
+		log.Fatalln("Failed to connect db using gorm")
+	}
+	fmt.Println(Goram_db)
 
 	// バックテストにおける売買データを記録するテーブル
 	cmd := fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s (

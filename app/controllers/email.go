@@ -9,6 +9,10 @@ import (
 	"text/template"
 )
 
+// このファイルではモデル内のファイルを参照していないし、view上でも使われいない
+// →コントローラー内にこのファイルがあるのは不適切なのでは？
+
+
 type EmailTemplate struct{
 	Subject string
 	Body 	string

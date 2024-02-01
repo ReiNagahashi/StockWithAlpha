@@ -93,6 +93,7 @@ func (ai *AI) Sell(symbol string, candle models.Candle) (childOrderAcceptanceID 
 
 
 func (ai *AI) Trade(symbol, name string){
+
 	params := ai.OptimizedTradeParams[symbol]
 	df, _ := models.GetAllCandle(symbol, name, ai.Duration, ai.PastPeriod)
 	lenCandles := len(df.Candles)

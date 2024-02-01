@@ -301,6 +301,8 @@
                 $.get("/api/ticker_search/", param).done(function(data){
                     console.log(data)
                     config.tickersBySearch.tickers = data["bestMatches"];
+                    
+                    if(config.tickersBySearch.tickers == null) return;
 
                     config.tickersBySearch.tickers.forEach((ticker, i) => {
                         const li = document.createElement("li");
@@ -483,9 +485,9 @@
                         config.bbands.mid = mid;
                         config.bbands.down = down;
                     }
-
+console.log(data['events'])
                     if (data['events'] != undefined && data['events']['signals'] != undefined) {
-                        config.dataTable.index += 1;
+                        config.dataTable.index += 1; 
                         config.events.indices[0] = config.dataTable.index;
                         config.dataTable.index += 1;
                         config.events.indices[1] = config.dataTable.index;
@@ -500,6 +502,8 @@
                             profit = "$" + String(Math.round(data['events']['profit'] * 100) / 100);
                             $('#profit').html("Change:" + profit);
                         }
+
+                        console.log("Events manip Ended")
                     }
                     
                     if (data['rsi'] != undefined ){

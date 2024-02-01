@@ -1,5 +1,12 @@
 package alpha
 
+// やっと理解した。Tickerの構造体がここにある理由は、APIから直接持ってくる構造体
+// →APIと通信するためにはAPIClientが必要になる。
+// 一方で、candleはTikerの特定のフィールドを引数として渡して自身で作った構造体
+// その上で、dbでの処理をするので、modelにcandeが置いてあるのだ
+// さもなければ、例えばORMを組もうとしても、どこのモデルとモデルを関連付けさせるのかが分からなくなる
+// つまり、alpha antage以外のAPIを使う場合は、新たにフォルダを作成する
+
 import (
 	"bytes"
 	"encoding/json"
@@ -238,4 +245,108 @@ func (api *APIClient) GetTickerInfo(f, keyword string) (*TickerByKeyword, error)
 
 	return &response, nil
 
+}
+
+// Company Overview
+type CompanyOverview struct {
+	Symbol                     string `json:"Symbol"`
+	AssetType                  string `json:"AssetType"`
+	Name                       string `json:"Name"`
+	Description                string `json:"Description"`
+	Cik                        string `json:"CIK"`
+	Exchange                   string `json:"Exchange"`
+	Currency                   string `json:"Currency"`
+	Country                    string `json:"Country"`
+	Sector                     string `json:"Sector"`
+	Industry                   string `json:"Industry"`
+	Address                    string `json:"Address"`
+	FiscalYearEnd              string `json:"FiscalYearEnd"`
+	LatestQuarter              string `json:"LatestQuarter"`
+	MarketCapitalization       string `json:"MarketCapitalization"`
+	Ebitda                     string `json:"EBITDA"`
+	PERatio                    string `json:"PERatio"`
+	PEGRatio                   string `json:"PEGRatio"`
+	BookValue                  string `json:"BookValue"`
+	DividendPerShare           string `json:"DividendPerShare"`
+	DividendYield              string `json:"DividendYield"`
+	Eps                        string `json:"EPS"`
+	RevenuePerShareTTM         string `json:"RevenuePerShareTTM"`
+	ProfitMargin               string `json:"ProfitMargin"`
+	OperatingMarginTTM         string `json:"OperatingMarginTTM"`
+	ReturnOnAssetsTTM          string `json:"ReturnOnAssetsTTM"`
+	ReturnOnEquityTTM          string `json:"ReturnOnEquityTTM"`
+	RevenueTTM                 string `json:"RevenueTTM"`
+	GrossProfitTTM             string `json:"GrossProfitTTM"`
+	DilutedEPSTTM              string `json:"DilutedEPSTTM"`
+	QuarterlyEarningsGrowthYOY string `json:"QuarterlyEarningsGrowthYOY"`
+	QuarterlyRevenueGrowthYOY  string `json:"QuarterlyRevenueGrowthYOY"`
+	AnalystTargetPrice         string `json:"AnalystTargetPrice"`
+	TrailingPE                 string `json:"TrailingPE"`
+	ForwardPE                  string `json:"ForwardPE"`
+	PriceToSalesRatioTTM       string `json:"PriceToSalesRatioTTM"`
+	PriceToBookRatio           string `json:"PriceToBookRatio"`
+	EVToRevenue                string `json:"EVToRevenue"`
+	EVToEBITDA                 string `json:"EVToEBITDA"`
+	Beta                       string `json:"Beta"`
+	Five2WeekHigh              string `json:"52WeekHigh"`
+	Five2WeekLow               string `json:"52WeekLow"`
+	Five0DayMovingAverage      string `json:"50DayMovingAverage"`
+	Two00DayMovingAverage      string `json:"200DayMovingAverage"`
+	SharesOutstanding          string `json:"SharesOutstanding"`
+	DividendDate               string `json:"DividendDate"`
+	ExDividendDate             string `json:"ExDividendDate"`
+}
+
+
+func (api *APIClient) GetCompanyOverview() error {
+	resp, err := api.doRequest("GET", "", map[string]string{"function": "OVERVIEW", "symbol": config.Config.Symbol, "apikey": config.Config.ApiKey}, nil)
+	if err != nil{
+		return err
+	}
+	
+	var response = CompanyOverview{}
+
+	if err := json.Unmarshal([]byte(resp), &response); err != nil {
+		return err
+	}
+
+	pegRatio,_ := strconv.ParseFloat(response.PEGRatio, 64)
+	pEGRatio,_ := strconv.ParseFloat(response.PEGRatio, 64)
+	quarterlyEarningsGrowthYOY,_ := strconv.ParseFloat(response.QuarterlyEarningsGrowthYOY, 64)
+	quarterlyRevenueGrowthYOY,_ := strconv.ParseFloat(response.QuarterlyRevenueGrowthYOY, 64)
+	returnOnAssetsTTM,_ := strconv.ParseFloat(response.ReturnOnAssetsTTM, 64)
+	returnOnEquityTTM,_ := strconv.ParseFloat(response.ReturnOnEquityTTM, 64)
+	operatingMarginTTM,_ := strconv.ParseFloat(response.OperatingMarginTTM, 64)
+	dividendPerShare,_ := strconv.ParseFloat(response.DividendPerShare, 64)
+	dividendYield,_ := strconv.ParseFloat(response.DividendYield, 64)
+	beta,_ := strconv.ParseFloat(response.Beta, 64)
+	marketCapitalization,_ := strconv.Atoi(response.MarketCapitalization)
+	revenueTTM,_ := strconv.Atoi(response.RevenueTTM)
+	ebitda,_ := strconv.Atoi(response.Ebitda)
+
+	
+	companyFundamental := models.CompanyFundamental{
+		Symbol: response.Symbol,
+		Industry: response.Industry,
+		PERatio: pegRatio,
+		PEGRatio: pEGRatio,
+		QuarterlyEarningsGrowthYOY: quarterlyEarningsGrowthYOY,
+		QuarterlyRevenueGrowthYOY: quarterlyRevenueGrowthYOY,
+		ReturnOnAssetsTTM: returnOnAssetsTTM,
+		ReturnOnEquityTTM: returnOnEquityTTM,
+		OperatingMarginTTM: operatingMarginTTM,
+		DividendPerShare: dividendPerShare,
+		DividendYield: dividendYield,
+		Beta: beta,
+		MarketCapitalization: marketCapitalization,
+		RevenueTTM: revenueTTM,
+		Ebitda: ebitda,
+
+	}
+
+	if (models.CreateCompanyFundamental(companyFundamental)){
+		fmt.Println("CompanyFundamental data inseted!")
+	}
+
+	return nil
 }
