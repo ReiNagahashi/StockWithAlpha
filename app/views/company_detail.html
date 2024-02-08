@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Company Detail</title>
+    <style>
+        .doc {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px; /* テーブル間の間隔 */
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px; /* テーブル下の余白 */
+        }
+        th, td {
+            border: 1px solid #ddd; /* セルの境界線 */
+            text-align: left;
+            padding: 8px; /* セル内のパディング */
+        }
+        th {
+            background-color: #f2f2f2; /* ヘッダーの背景色 */
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9; /* 偶数行の背景色 */
+        }
+        tr:hover {
+            background-color: #eaeaea; /* ホバー時の行の背景色 */
+        }
+    </style>
+    <script>
+        var config = {
+            company :{}
+        }
+        async function fetchFundamentalDocument(doc_name, url){
+            try{
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', },
+                    body: JSON.stringify({
+                        symbol: config.company.Symbol
+                    })
+                });
+                const data = await response.json();
+
+                console.log(data);
+                data.forEach((doc, i) => {
+                    var tableContainer = document.getElementById(`${doc_name + (i+1).toString()}`);
+                    var table = `<table><tr><th>Field</th><th>Value</th></tr>`;
+
+                    for (const [key, val] of Object.entries(doc)){
+                        table += `<tr><td>${key}</td><td>${val}</td></tr>`;
+                    }
+                    table += `</table>`;
+                    tableContainer.innerHTML = table;
+                })
+            }catch (error){
+                console.log("Error", error);
+            }
+        }
+
+        function test(doc_name){
+            const objs = [{'a':1, 'b':2, 'c': 3}, {'d':4, 'e':5, 'f': 6}];
+
+            objs.forEach((obj, i) => {
+                var ol = document.getElementById(`${doc_name + (i + 1).toString()}`);
+                for (const [key, val] of Object.entries(obj)){
+                    console.log(key, val);
+                    ol.innerHTML += `<li>${key} : ${val}</li>`
+                }
+            })
+
+        }
+        
+        window.onload = function(){
+            const company = JSON.parse(localStorage.getItem('company_detail_info'));
+            config.company = company;
+            var tableContainer = document.getElementById('essential_list');
+            var table = `<table><tr><th>Field</th><th>Value</th></tr>`;
+            for(const [key, val] of Object.entries(company)){
+                table += `<li>${key} : ${val}</li>`;
+            }
+            table += `</table>`;
+            tableContainer.innerHTML = table;
+
+            fetchFundamentalDocument('bs', '/api/fetch_bs/');
+            //fetchFundamentalDocument('pl', '/api/fetch_pl/');
+            //fetchFundamentalDocument('cf', '/api/fetch_cf/');
+            //test('bs');
+        }
+    </script>
+</head>
+<body>
+    <h1>Company Detail</h1>
+    <div id = "essential">
+        <h2>Overview</h2>
+        <div id = "essential_list"></div>
+    </div>
+    <div id="bs_pl">
+        <div id="bs">
+            <h2>Balance Sheet</h2>
+            <div class = "doc">
+                <div id="bs1"></div>
+                <div id="bs2"></div>
+            </div>
+        </div>
+        <div id="pl">
+            <h2>Income Statement</h2>
+            <div class = "doc">
+                <div id="pl1"></div>
+                <div id="pl2"></div>
+            </div>
+
+        </div>
+        <div id="cf">
+            <h2>Cash Flow</h2>
+            <div class = "doc">
+                <div id="cf1"></div>
+                <div id="cf2"></div>
+            </div>
+
+        </div>
+    </div>
+    <div id="essential_info"></div>
+
+</body>
+</html>
+

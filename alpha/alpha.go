@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"stock-with-alpha/app/models"
@@ -298,16 +299,16 @@ type CompanyOverview struct {
 }
 
 
-func (api *APIClient) GetCompanyOverview() error {
-	resp, err := api.doRequest("GET", "", map[string]string{"function": "OVERVIEW", "symbol": config.Config.Symbol, "apikey": config.Config.ApiKey}, nil)
+func (api *APIClient) GetCompanyOverview(symbol string, ch chan <- error) {
+	resp, err := api.doRequest("GET", "", map[string]string{"function": "OVERVIEW", "symbol": symbol, "apikey": config.Config.ApiKey}, nil)
 	if err != nil{
-		return err
+		ch <- err
 	}
 	
 	var response = CompanyOverview{}
 
 	if err := json.Unmarshal([]byte(resp), &response); err != nil {
-		return err
+		ch <- err
 	}
 
 	pegRatio,_ := strconv.ParseFloat(response.PEGRatio, 64)
@@ -327,6 +328,7 @@ func (api *APIClient) GetCompanyOverview() error {
 	
 	companyFundamental := models.CompanyFundamental{
 		Symbol: response.Symbol,
+		Sector: response.Sector,
 		Industry: response.Industry,
 		PERatio: pegRatio,
 		PEGRatio: pEGRatio,
@@ -345,8 +347,188 @@ func (api *APIClient) GetCompanyOverview() error {
 	}
 
 	if (models.CreateCompanyFundamental(companyFundamental)){
-		fmt.Println("CompanyFundamental data inseted!")
+		fmt.Println("CompanyFundamental data inserted!")
 	}
 
-	return nil
+}
+
+
+type BSAnnualReport struct{
+	FiscalDateEnding                       string `json:"fiscalDateEnding"`
+	ReportedCurrency                       string `json:"reportedCurrency"`
+	TotalAssets                            string `json:"totalAssets"`
+	TotalCurrentAssets                     string `json:"totalCurrentAssets"`
+	CashAndCashEquivalentsAtCarryingValue  string `json:"cashAndCashEquivalentsAtCarryingValue"`
+	CashAndShortTermInvestments            string `json:"cashAndShortTermInvestments"`
+	Inventory                              string `json:"inventory"`
+	CurrentNetReceivables                  string `json:"currentNetReceivables"`
+	TotalNonCurrentAssets                  string `json:"totalNonCurrentAssets"`
+	PropertyPlantEquipment                 string `json:"propertyPlantEquipment"`
+	AccumulatedDepreciationAmortizationPPE string `json:"accumulatedDepreciationAmortizationPPE"`
+	IntangibleAssets                       string `json:"intangibleAssets"`
+	IntangibleAssetsExcludingGoodwill      string `json:"intangibleAssetsExcludingGoodwill"`
+	Goodwill                               string `json:"goodwill"`
+	Investments                            string `json:"investments"`
+	LongTermInvestments                    string `json:"longTermInvestments"`
+	ShortTermInvestments                   string `json:"shortTermInvestments"`
+	OtherCurrentAssets                     string `json:"otherCurrentAssets"`
+	OtherNonCurrentAssets                  string `json:"otherNonCurrentAssets"`
+	TotalLiabilities                       string `json:"totalLiabilities"`
+	TotalCurrentLiabilities                string `json:"totalCurrentLiabilities"`
+	CurrentAccountsPayable                 string `json:"currentAccountsPayable"`
+	DeferredRevenue                        string `json:"deferredRevenue"`
+	CurrentDebt                            string `json:"currentDebt"`
+	ShortTermDebt                          string `json:"shortTermDebt"`
+	TotalNonCurrentLiabilities             string `json:"totalNonCurrentLiabilities"`
+	CapitalLeaseObligations                string `json:"capitalLeaseObligations"`
+	LongTermDebt                           string `json:"longTermDebt"`
+	CurrentLongTermDebt                    string `json:"currentLongTermDebt"`
+	LongTermDebtNoncurrent                 string `json:"longTermDebtNoncurrent"`
+	ShortLongTermDebtTotal                 string `json:"shortLongTermDebtTotal"`
+	OtherCurrentLiabilities                string `json:"otherCurrentLiabilities"`
+	OtherNonCurrentLiabilities             string `json:"otherNonCurrentLiabilities"`
+	TotalShareholderEquity                 string `json:"totalShareholderEquity"`
+	TreasuryStock                          string `json:"treasuryStock"`
+	RetainedEarnings                       string `json:"retainedEarnings"`
+	CommonStock                            string `json:"commonStock"`
+	CommonStockSharesOutstanding           string `json:"commonStockSharesOutstanding"`
+}
+
+//AnnualReportsの一部のみを取りたいので、AnnualReportという構造体を作って扱いやすいようにした
+type BS struct {
+	Symbol        string 			`json:"symbol"`
+	AnnualReports []BSAnnualReport 	`json:"annualReports"`
+}
+
+
+func (api *APIClient) GetBS(symbol string) []BSAnnualReport {
+	resp, err := api.doRequest("GET", "", map[string]string{"function": "BALANCE_SHEET", "symbol": symbol, "apikey": config.Config.ApiKey}, nil)
+	if err != nil{
+		log.Fatalln(err)
+		return nil
+	}
+	
+	var response = BS{}
+
+	if err := json.Unmarshal([]byte(resp), &response); err != nil {
+		log.Fatalln(err)
+		return nil
+	}
+
+	return response.AnnualReports[:2]
+
+}
+
+
+type PLAnnualReport struct {
+	FiscalDateEnding                  string `json:"fiscalDateEnding"`
+	ReportedCurrency                  string `json:"reportedCurrency"`
+	GrossProfit                       string `json:"grossProfit"`
+	TotalRevenue                      string `json:"totalRevenue"`
+	CostOfRevenue                     string `json:"costOfRevenue"`
+	CostofGoodsAndServicesSold        string `json:"costofGoodsAndServicesSold"`
+	OperatingIncome                   string `json:"operatingIncome"`
+	SellingGeneralAndAdministrative   string `json:"sellingGeneralAndAdministrative"`
+	ResearchAndDevelopment            string `json:"researchAndDevelopment"`
+	OperatingExpenses                 string `json:"operatingExpenses"`
+	InvestmentIncomeNet               string `json:"investmentIncomeNet"`
+	NetInterestIncome                 string `json:"netInterestIncome"`
+	InterestIncome                    string `json:"interestIncome"`
+	InterestExpense                   string `json:"interestExpense"`
+	NonInterestIncome                 string `json:"nonInterestIncome"`
+	OtherNonOperatingIncome           string `json:"otherNonOperatingIncome"`
+	Depreciation                      string `json:"depreciation"`
+	DepreciationAndAmortization       string `json:"depreciationAndAmortization"`
+	IncomeBeforeTax                   string `json:"incomeBeforeTax"`
+	IncomeTaxExpense                  string `json:"incomeTaxExpense"`
+	InterestAndDebtExpense            string `json:"interestAndDebtExpense"`
+	NetIncomeFromContinuingOperations string `json:"netIncomeFromContinuingOperations"`
+	ComprehensiveIncomeNetOfTax       string `json:"comprehensiveIncomeNetOfTax"`
+	Ebit                              string `json:"ebit"`
+	Ebitda                            string `json:"ebitda"`
+	NetIncome                         string `json:"netIncome"`
+}
+
+
+//AnnualReportsの一部のみを取りたいので、AnnualReportという構造体を作って扱いやすいようにした
+type PL struct {
+	Symbol        string 			`json:"symbol"`
+	AnnualReports []PLAnnualReport 	`json:"annualReports"`
+}
+
+
+func (api *APIClient) GetPL(symbol string) []PLAnnualReport {
+	resp, err := api.doRequest("GET", "", map[string]string{"function": "INCOME_STATEMENT", "symbol": symbol, "apikey": config.Config.ApiKey}, nil)
+	if err != nil{
+		log.Fatalln(err)
+		return nil
+	}
+	
+	var response = PL{}
+	if err := json.Unmarshal([]byte(resp), &response); err != nil {
+		log.Fatalln(err)
+		return nil
+	}
+
+	return response.AnnualReports[:2]
+
+}
+
+
+type CFAnnualReport struct {
+	FiscalDateEnding                                          string `json:"fiscalDateEnding"`
+	ReportedCurrency                                          string `json:"reportedCurrency"`
+	OperatingCashflow                                         string `json:"operatingCashflow"`
+	PaymentsForOperatingActivities                            string `json:"paymentsForOperatingActivities"`
+	ProceedsFromOperatingActivities                           string `json:"proceedsFromOperatingActivities"`
+	ChangeInOperatingLiabilities                              string `json:"changeInOperatingLiabilities"`
+	ChangeInOperatingAssets                                   string `json:"changeInOperatingAssets"`
+	DepreciationDepletionAndAmortization                      string `json:"depreciationDepletionAndAmortization"`
+	CapitalExpenditures                                       string `json:"capitalExpenditures"`
+	ChangeInReceivables                                       string `json:"changeInReceivables"`
+	ChangeInInventory                                         string `json:"changeInInventory"`
+	ProfitLoss                                                string `json:"profitLoss"`
+	CashflowFromInvestment                                    string `json:"cashflowFromInvestment"`
+	CashflowFromFinancing                                     string `json:"cashflowFromFinancing"`
+	ProceedsFromRepaymentsOfShortTermDebt                     string `json:"proceedsFromRepaymentsOfShortTermDebt"`
+	PaymentsForRepurchaseOfCommonStock                        string `json:"paymentsForRepurchaseOfCommonStock"`
+	PaymentsForRepurchaseOfEquity                             string `json:"paymentsForRepurchaseOfEquity"`
+	PaymentsForRepurchaseOfPreferredStock                     string `json:"paymentsForRepurchaseOfPreferredStock"`
+	DividendPayout                                            string `json:"dividendPayout"`
+	DividendPayoutCommonStock                                 string `json:"dividendPayoutCommonStock"`
+	DividendPayoutPreferredStock                              string `json:"dividendPayoutPreferredStock"`
+	ProceedsFromIssuanceOfCommonStock                         string `json:"proceedsFromIssuanceOfCommonStock"`
+	ProceedsFromIssuanceOfLongTermDebtAndCapitalSecuritiesNet string `json:"proceedsFromIssuanceOfLongTermDebtAndCapitalSecuritiesNet"`
+	ProceedsFromIssuanceOfPreferredStock                      string `json:"proceedsFromIssuanceOfPreferredStock"`
+	ProceedsFromRepurchaseOfEquity                            string `json:"proceedsFromRepurchaseOfEquity"`
+	ProceedsFromSaleOfTreasuryStock                           string `json:"proceedsFromSaleOfTreasuryStock"`
+	ChangeInCashAndCashEquivalents                            string `json:"changeInCashAndCashEquivalents"`
+	ChangeInExchangeRate                                      string `json:"changeInExchangeRate"`
+	NetIncome                                                 string `json:"netIncome"`
+}
+
+
+//AnnualReportsの一部のみを取りたいので、AnnualReportという構造体を作って扱いやすいようにした
+type CF struct {
+	Symbol        string 			`json:"symbol"`
+	AnnualReports []CFAnnualReport 	`json:"annualReports"`
+}
+
+
+func (api *APIClient) GetCF(symbol string) []CFAnnualReport {
+	resp, err := api.doRequest("GET", "", map[string]string{"function": "CASH_FLOW", "symbol": symbol, "apikey": config.Config.ApiKey}, nil)
+	if err != nil{
+		log.Fatalln(err)
+		return nil
+	}
+	
+	var response = CF{}
+
+	if err := json.Unmarshal([]byte(resp), &response); err != nil {
+		log.Fatalln(err)
+		return nil
+	}
+
+	return response.AnnualReports[:2]
+
 }

@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <title>Home</title>
+        <style>
+        /* 基本的なリセットとフォント設定 */
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Arial', sans-serif;
+            background-color: #f4f4f4;
+        }
+
+        h2, h3 {
+            color: #333;
+        }
+
+        /* モーダルウィンドウのスタイルの更新 */
+        .modal {
+            display: none; /* 最初は非表示 */
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.5); /* 背景色を少し暗く */
+        }
+
+        .modal-content {
+            background-color: #fff;
+            margin: 10% auto; /* 上のマージンを減らす */
+            padding: 40px; /* パディングを増やす */
+            border: none; /* ボーダーを削除 */
+            border-radius: 8px; /* 角を丸く */
+            width: 50%; /* 幅を調整 */
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2); /* 影を追加 */
+        }
+
+        .close {
+            color: #666;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .close:hover,
+        .close:focus {
+            color: #000;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        /* ボタンスタイル */
+        button {
+            background-color: #007bff; /* ブートストラップの青色 */
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        /* リストとリストアイテムのスタイル */
+        ul, li {
+            list-style-type: none; /* リストマーカーを非表示 */
+            padding: 0;
+            margin: 0;
+        }
+
+        li {
+            margin-bottom: 10px; /* リストアイテム間のマージン */
+            padding: 10px;
+            background-color: #fff;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            box-sizing: border-box; /* 入力フィールドの幅を調整 */
+        }
+        </style>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+        <script type="text/javascript">
+            var config = {
+                tickersBySearch: {
+                    tickers: []
+                },
+                portfolio:{
+                    //tickersには{name: , symbol: }が要素として入っている
+                    tickers: [],
+                    companies: [],
+                    sectors: {},
+                    industries: {}
+                }
+            };
+
+
+            //キーワードがフォームに入力されたら候補となるティッカーをリストとして表示
+            function sendTickerKeyword(keyword){
+                var param = {"keyword": keyword};
+                const ul = document.getElementById("ticker_list");
+
+                $("#ticker_list").empty();
+
+                $.get("/api/ticker_search/", param).done(function(data){
+                    console.log(data)
+                    config.tickersBySearch.tickers = data["bestMatches"];
+                    
+                    if(config.tickersBySearch.tickers == null) return;
+
+                    config.tickersBySearch.tickers.forEach((ticker, i) => {
+                        const li = document.createElement("li");
+                        li.innerHTML = `${ticker["2. name"]}(Ticker Code: ${ticker["1. symbol"]}) <button class="open-modal" data-index = ${i}>Click Me</button>`;
+
+                        ul.appendChild(li);
+                    });
+
+                })
+            }
+
+            // テーブルを作ってキャンドルデータを入れた上でポートフォリオに保存する
+            function getTicker(symbol, name){
+                const params = {'symbol': symbol ,'name': name};
+
+                $.get("/api/ingestion_candle/", params).done(function(data){
+                    console.log(`${name} data successfully inserted!!`);
+                    displayPortfolio();
+                })
+                $("#myModal").hide();
+            }
+
+
+            function deleteCandleTable(index, symbol){
+                if(config.portfolio.tickers.length <= 0) return;
+
+                $.get("/api/drop_candle_table/", {"symbol": symbol}).done(function(data){
+                    console.log("Ready to drop!");
+
+                    //フロントエンド上で対象要素を削除
+                    $(`button.switchChart[data-index='${index}']`).remove();
+                    displayPortfolio();
+                })
+            }
+
+            async function displayPortfolio(){
+                config.portfolio.tickers = [];
+                try{
+                    //保存しているティッカーテーブルを全て取得
+                    const response = await fetch("/api/display_tables/");
+                    const data = await response.json();
+                    
+                    if(data == null) return ;
+                    
+                    data.forEach((ticker, i) =>{
+                        let d = {symbol: ticker[0], name: ticker[1]};
+                        config.portfolio.tickers.push(d);
+                    });
+
+                    //取ってきたティッカーテーブルのシンボルをもとにファンダメンタルの指標を持った企業構造体を取ってくる
+                    const responseCompanies = await fetch("/api/display_saved_companies/",{
+                        method: "POST",
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({portfolio_tickers: config.portfolio.tickers.map(ticker => ticker.symbol)}),
+                    });
+
+                    
+                    const companiesData = await responseCompanies.json();
+
+                    config.portfolio.sectors = new Map();
+                    config.portfolio.industries = new Map();
+                    companiesData.companies.forEach(company => {
+                        config.portfolio.companies.push(company);
+                        //セクターごとにまとめる
+                        if(!config.portfolio.sectors.has(company.Sector)) config.portfolio.sectors.set(company.Sector, [company]);
+                        else config.portfolio.sectors.get(company.Sector).push(company);
+                        //業種ごとにまとめる
+                        if(!config.portfolio.industries.has(company.Industry)) config.portfolio.industries.set(company.Industry, [company]);
+                        else config.portfolio.industries.get(company.Industry).push(company);
+                    });
+
+                }catch(error){
+                    console.error("Error", error);
+                }
+                // ティッカー情報をリストに表示させる
+                // company_numによってボタンにつけるidをユニークにする
+                var company_num = 0;
+                config.portfolio.sectors.forEach((companies, sector) => {
+                    //innerHTMLに関してはjqueryだと面倒だな...
+                    $("#ticker_list").append(
+                        `<div id = '${sector}'>` + 
+                            `<h2>` + `${sector}` + `</h2>` + 
+                            `<ul id = '${sector}_list'>` + `</ul>` + 
+                        `</div>`
+                    )
+                    $(`${sector}_list`).empty();
+                    const ul = document.getElementById(`${sector}_list`);
+
+                    companies.forEach(company => {
+                        // tikers配列からsymbolをもとに各ティッカーの名前を取得
+                        const company_name = config.portfolio.tickers.find(ticker => ticker.symbol === company.Symbol).name;
+                        const li = document.createElement("li");
+                        li.innerHTML = 
+                            `<h3> ${company_name} (Ticker Code: ${company.Symbol})</h3>
+                            <button class = "company_detail" data-index = ${company_num} >Open B/S & P/L</button>
+                            <button class = "switchChart" data-index = ${company_num} >Open Chart</button>
+                            <button class = "dropProduct" data-index = ${company_num} >Delete</button>
+                        `;
+                        company_num++;
+
+                        ul.appendChild(li);
+                    })
+
+                })
+
+            }
+
+
+            window.onload = function (){
+                displayPortfolio();
+                
+                //ティッカーリスト内のボタンを押した時に表示されるモーダル
+                $(document).on("click", ".open-modal", function(){
+                    let index = $(this).data("index");
+                    let symbol = config.tickersBySearch.tickers[index]["1. symbol"]
+                    let name = config.tickersBySearch.tickers[index]["2. name"];
+                    $("#modal-content").html(`URL: <a href = "google.com">${name}</a>`);
+                    $("#modal-content").append(
+                        `<h3>Name: ${name}</h3`+
+                        "<p>Look Details of this product</p>"+
+                        `<button onclick='getTicker("${symbol}", "${name}")'>Save it into portfolio</button>`)
+                    $("#myModal").show();
+                });
+
+                //モーダルのクローズ
+                $(".close").click(function(){
+                    $("#myModal").hide();
+                }); 
+
+                //ポートフォリオ内でのOpen Chartを押してチャートページ(chart.html)に遷移
+                $(document).on("click", ".switchChart", function(){
+                    let index = $(this).data("index");
+                    let name = config.portfolio.tickers[index].name;
+                    let symbol = config.portfolio.tickers[index].symbol;
+                    localStorage.setItem('candle_params', JSON.stringify({'name': name, 'symbol': symbol}));
+                    window.open('/chart', 'blank');
+                });
+
+                //ポートフォリオ内でのDeleteを押してポートフォリオから削除
+                $(document).on("click", ".dropProduct", function(){
+                    let index = $(this).data("index");
+                    let symbol = config.portfolio.tickers[index].symbol;
+                    deleteCandleTable(index, symbol);
+                });
+
+                 //ポートフォリオ内でのDetailを押してcompany_detail.htmlに遷移
+                $(document).on("click", ".company_detail", function(){
+                    let index = $(this).data("index");
+                    let symbol = config.portfolio.tickers[index].symbol;
+                    const company_obj = config.portfolio.companies.find(company => company.Symbol == symbol);
+                    //クライアントサイドに企業の詳細情報を保存
+                    localStorage.setItem('company_detail_info', JSON.stringify(company_obj));
+                    //ページ遷移
+                    window.open('/company_detail', 'blank');
+                });
+
+                $("#input_ticker_keyword").change(function(){
+                    config.tickersBySearch.tickers = [];
+                    if(this.value.length > 0) sendTickerKeyword(this.value);
+                    else $("#ticker_list").empty();
+                })
+
+            }
+        </script>
+    </head>
+    <body>
+        <div>
+            <h2>Ticker Search</h2>
+            <input type="text" id="input_ticker_keyword">
+        </div>
+        <div id="ticker_list"></div>
+        <ul id="ticker_list_by_tables"></ul>
+        <div id="myModal" class="modal">
+            <div class="modal-content">
+                <span class="close">&times;</span>
+                <p id="modal-content">ここにURLが表示されます</p>
+            </div>
+        </div>
+    </body>
+</html>
