@@ -17,6 +17,7 @@ import (
 	"net/url"
 	"stock-with-alpha/app/models"
 	"stock-with-alpha/config"
+	"stock-with-alpha/utils"
 	"strconv"
 	"strings"
 	"time"
@@ -344,6 +345,15 @@ func (api *APIClient) GetCompanyOverview(symbol string, ch chan <- error) {
 		RevenueTTM: revenueTTM,
 		Ebitda: ebitda,
 
+	}
+
+	if(utils.IsStructEmpty(companyFundamental)){
+		log.Printf("Struct is Empty. You can't create CompanyFundamental for %s", symbol)
+		companyFundamental = models.CompanyFundamental{
+			Symbol: symbol,
+			Sector: "none",
+			Industry: "none",
+		}
 	}
 
 	if (models.CreateCompanyFundamental(companyFundamental)){

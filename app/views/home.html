@@ -7,15 +7,39 @@
         <style>
         /* 基本的なリセットとフォント設定 */
         body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f5f5f5;
             margin: 0;
             padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+    
+        #container {
+            width: 100%; /* もしくは固定の幅、例えば800pxなど */
+            max-width: 1000px; /* 必要に応じて最大幅を設定 */
+            margin: auto;
+            padding: 20px;
+        }
+
+        h1 {
             font-family: 'Arial', sans-serif;
-            background-color: #f4f4f4;
+            font-size: 48px; /* タイトルのフォントサイズを大きくして目立たせます */
+            background: -webkit-linear-gradient(left, #007bff, #6610f2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-align: center;
+            margin: 20px 0;
+            padding: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2); /* テキストの周りに軽いシャドウを追加 */
         }
 
         h2, h3 {
             color: #333;
         }
+
+   
 
         /* モーダルウィンドウのスタイルの更新 */
         .modal {
@@ -91,6 +115,10 @@
             border-radius: 5px;
             border: 1px solid #ccc;
             box-sizing: border-box; /* 入力フィールドの幅を調整 */
+        }
+
+        .ticker_list{
+            align-items: center;
         }
         </style>
         <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
@@ -201,10 +229,11 @@
                 // company_numによってボタンにつけるidをユニークにする
                 var company_num = 0;
                 config.portfolio.sectors.forEach((companies, sector) => {
+                    const headName = sector != 'none'? sector : 'Others(ETF,Mutual Fund, etc...)';
                     //innerHTMLに関してはjqueryだと面倒だな...
                     $("#ticker_list").append(
                         `<div id = '${sector}'>` + 
-                            `<h2>` + `${sector}` + `</h2>` + 
+                            `<h2>` + `${headName}` + `</h2>` + 
                             `<ul id = '${sector}_list'>` + `</ul>` + 
                         `</div>`
                     )
@@ -258,7 +287,7 @@
                     let name = config.portfolio.tickers[index].name;
                     let symbol = config.portfolio.tickers[index].symbol;
                     localStorage.setItem('candle_params', JSON.stringify({'name': name, 'symbol': symbol}));
-                    window.open('/chart', 'blank');
+                    window.open('/chart', '_blank');
                 });
 
                 //ポートフォリオ内でのDeleteを押してポートフォリオから削除
@@ -276,7 +305,7 @@
                     //クライアントサイドに企業の詳細情報を保存
                     localStorage.setItem('company_detail_info', JSON.stringify(company_obj));
                     //ページ遷移
-                    window.open('/company_detail', 'blank');
+                    window.open('/company_detail', '_blank');
                 });
 
                 $("#input_ticker_keyword").change(function(){
@@ -289,16 +318,18 @@
         </script>
     </head>
     <body>
-        <div>
-            <h2>Ticker Search</h2>
-            <input type="text" id="input_ticker_keyword">
-        </div>
-        <div id="ticker_list"></div>
-        <ul id="ticker_list_by_tables"></ul>
-        <div id="myModal" class="modal">
-            <div class="modal-content">
-                <span class="close">&times;</span>
-                <p id="modal-content">ここにURLが表示されます</p>
+        <div id="container">
+            <h1>GoTrage With ALPHA</h1>
+            <div>
+                <h2>Ticker Search</h2>
+                <input type="text" id="input_ticker_keyword">
+            </div>
+            <div id="ticker_list"></div>
+            <div id="myModal" class="modal">
+                <div class="modal-content">
+                    <span class="close">&times;</span>
+                    <p id="modal-content">ここにURLが表示されます</p>
+                </div>
             </div>
         </div>
     </body>

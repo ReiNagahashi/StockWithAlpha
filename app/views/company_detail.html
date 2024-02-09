@@ -80,12 +80,12 @@
             var tableContainer = document.getElementById('essential_list');
             var table = `<table><tr><th>Field</th><th>Value</th></tr>`;
             for(const [key, val] of Object.entries(company)){
-                table += `<li>${key} : ${val}</li>`;
+                table += `<tr><td>${key}</td><td>${val}</td></tr>`;
             }
             table += `</table>`;
             tableContainer.innerHTML = table;
 
-            fetchFundamentalDocument('bs', '/api/fetch_bs/');
+            //fetchFundamentalDocument('bs', '/api/fetch_bs/');
             //fetchFundamentalDocument('pl', '/api/fetch_pl/');
             //fetchFundamentalDocument('cf', '/api/fetch_cf/');
             //test('bs');

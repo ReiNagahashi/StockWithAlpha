@@ -61,12 +61,13 @@ func CreateCompanyFundamental(companyFundamental CompanyFundamental) bool {
 	return true
 }
 
+
 func GetCompanyBySymbol(symbol string) *CompanyFundamental {
 	companyFundamental := CompanyFundamental{}
 	res := Goram_db.Where("symbol = ?", symbol).First(&companyFundamental)
 
 	if res.Error != nil {
-		log.Fatalln("Failed to get company by industry.")
+		log.Println("Failed to get company by industry.")
 	}
 
 	return &companyFundamental
