@@ -5,6 +5,126 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Company Detail</title>
     <style>
+        #container {
+            width: 100%; /* もしくは固定の幅、例えば800pxなど */
+            max-width: 1000px; /* 必要に応じて最大幅を設定 */
+            margin: auto;
+            padding: 20px;
+        }
+        /* カルーセル */
+        #hot_news {
+            width: 80%;
+            max-width: 960px;
+            margin: 2rem auto;
+            padding: 1rem;
+            background: #fff;
+            box-shadow: 0 2px 15px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+        }
+        
+        #newsCarousel {
+            position: relative;
+        }
+        
+        .carousel-inner {
+            position: relative;
+            overflow: hidden;
+            width: 100%;
+        }
+        
+        .carousel-item {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        .news-item {
+            text-align: center;
+        }
+        
+        .news-item h5 {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 1rem;
+        }
+        
+        .news-item p {
+            font-size: 1rem;
+            margin-bottom: 1rem;
+
+            display: -webkit-box;
+            -webkit-box-orient: vertical;
+            -webkit-line-clamp: 3; /* 表示したいテキストの行数 */
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-height: 4.5em; /* lineHeight * lineClamp に基づく */
+            line-height: 1.5em;
+        }
+        
+        .news-item a {
+            display: inline-block;
+            text-decoration: none;
+            background: #007bff;
+            color: #fff;
+            padding: 0.5rem 1rem;
+            border-radius: 5px;
+            transition: background-color 0.2s;
+        }
+        
+        .news-item a:hover {
+            background-color: #0056b3;
+        }
+        
+        .news-date {
+            display: block;
+            font-size: 0.875rem;
+            color: #6c757d;
+            margin-top: 0.5rem;
+        }
+        
+        .carousel-control-prev,
+        .carousel-control-next {
+            width: 44px; /* コントローラーのサイズを適切に調整 */
+            height: 44px; /* コントローラーのサイズを適切に調整 */
+            align-items: center;
+            justify-content: center;
+            background-color: rgba(255, 255, 255, 0.8); /* 半透明の背景色を設定 */
+            border-radius: 22px; /* 円形に見せるための半径を設定 */
+            top: 50%;
+            transform: translateY(-50%); /* 垂直方向の中心に配置 */
+        }
+        
+        .carousel-control-prev-icon,
+        .carousel-control-next-icon {
+            background-size: contain;
+            background-image: none;
+            background-size: 100% 100%;
+            background-position: center;
+            color: blue;
+        }
+
+        
+        .carousel-indicators {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        
+        .carousel-indicators li {
+            background-color: #007bff;
+            border-radius: 50%;
+            width: 10px;
+            height: 10px;
+        }
+        
+        .carousel-indicators .active {
+            background-color: #0056b3;
+        }
+
         .doc {
             display: flex;
             flex-wrap: wrap;
@@ -29,11 +149,71 @@
         tr:hover {
             background-color: #eaeaea; /* ホバー時の行の背景色 */
         }
+
     </style>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.8.1/css/all.css">
+
+    <!-- Bootstrap JS and its dependencies -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.9.3/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
     <script>
         var config = {
             company :{}
         }
+
+        function fetchNews(){
+            let currentDate = new Date().toJSON().slice(0, 10);
+
+            var url = 'https://newsapi.org/v2/everything?' +
+            //`q=${config.company.Symbol} AND (株 OR ティム・クック OR 市場 OR 業績 OR 訴訟 OR 不祥事 OR 成長 OR 不安 OR 評価)&` +
+            `q=${config.company.Symbol} AND (stock OR market OR performance OR lawsuit OR scandal OR growth OR concern OR assessment)&` +
+            `from=2024-01-11&` +
+            `pageSize=10&` +
+            'sortBy=popularity&' +
+            //'language=jp&' +
+            'apiKey=c748f5405218415caf1891aea8c1e8e1';
+
+            var req = new Request(url);
+            
+            fetch(req)
+            .then(function(response) {
+                return response.json();
+            })
+            .then(function(data) {
+                const articles = data.articles;
+
+                articles.forEach((article, index) => {
+                    let carouselInner = document.querySelector('#newsCarousel .carousel-inner');
+    
+                    const title = article.title;
+                    const description = article.description;
+                    const url = article.url;
+                    const publishedAt = article.publishedAt;
+                    const urlToImage = article.urlToImage;
+                    
+                    
+                    // カルーセルアイテムのHTMLを作成
+                    let carouselItem = document.createElement('div');
+                    carouselItem.className = 'carousel-item' + (index === 0 ? ' active' : '');
+                    carouselItem.innerHTML = `
+                        <div class="news-item">
+                            <h5>${title}</h5>
+                            <p>${description}</p>
+                            <a href="${url}" target="_blank">Read more</a>
+                            <span class="news-date">${publishedAt}</span>
+                        </div>
+                    `;
+                    // カルーセル内に追加
+                    carouselInner.appendChild(carouselItem);
+                })
+            })
+            .catch(function(error){
+                console.log("Error: ", error);
+            })
+        }
+
         async function fetchFundamentalDocument(doc_name, url){
             try{
                 const response = await fetch(url, {
@@ -45,7 +225,6 @@
                 });
                 const data = await response.json();
 
-                console.log(data);
                 data.forEach((doc, i) => {
                     var tableContainer = document.getElementById(`${doc_name + (i+1).toString()}`);
                     var table = `<table><tr><th>Field</th><th>Value</th></tr>`;
@@ -67,7 +246,6 @@
             objs.forEach((obj, i) => {
                 var ol = document.getElementById(`${doc_name + (i + 1).toString()}`);
                 for (const [key, val] of Object.entries(obj)){
-                    console.log(key, val);
                     ol.innerHTML += `<li>${key} : ${val}</li>`
                 }
             })
@@ -89,42 +267,61 @@
             //fetchFundamentalDocument('pl', '/api/fetch_pl/');
             //fetchFundamentalDocument('cf', '/api/fetch_cf/');
             //test('bs');
+            fetchNews();
         }
     </script>
 </head>
 <body>
-    <h1>Company Detail</h1>
-    <div id = "essential">
-        <h2>Overview</h2>
-        <div id = "essential_list"></div>
+    <div id="container">
+        <h1>Company Detail</h1>
+        <div id="hot_news">
+            <h2 class="mb-5">Hot News</h2>
+            <!-- カルーセル -->
+            <div id="newsCarousel" class="carousel slide" data-ride="carousel">
+                <div class="carousel-inner">
+                    <!-- ここにカルーセルのアイテムが追加されます -->
+                </div>
+                <a class="carousel-control-prev" href="#newsCarousel" role="button" data-slide="prev">
+                    <span class="carousel-control-prev-icon" aria-hidden="true"><i class="fas fa-chevron-left"></i></span>
+                    <span class="sr-only">Previous</span>
+                </a>
+                <a class="carousel-control-next" href="#newsCarousel" role="button" data-slide="next">
+                    <span class="carousel-control-next-icon" aria-hidden="true"><i class="fas fa-chevron-right"></i></span>
+                    <span class="sr-only">Next</span>
+                </a>
+            </div>
+        </div>
+        <div id = "essential">
+            <h2>Overview</h2>
+            <div id = "essential_list"></div>
+        </div>
+        <div id="bs_pl">
+            <div id="bs">
+                <h2>Balance Sheet</h2>
+                <div class = "doc">
+                    <div id="bs1"></div>
+                    <div id="bs2"></div>
+                </div>
+            </div>
+            <div id="pl">
+                <h2>Income Statement</h2>
+                <div class = "doc">
+                    <div id="pl1"></div>
+                    <div id="pl2"></div>
+                </div>
+
+            </div>
+            <div id="cf">
+                <h2>Cash Flow</h2>
+                <div class = "doc">
+                    <div id="cf1"></div>
+                    <div id="cf2"></div>
+                </div>
+
+            </div>
+        </div>
+        <div id="essential_info"></div>
     </div>
-    <div id="bs_pl">
-        <div id="bs">
-            <h2>Balance Sheet</h2>
-            <div class = "doc">
-                <div id="bs1"></div>
-                <div id="bs2"></div>
-            </div>
-        </div>
-        <div id="pl">
-            <h2>Income Statement</h2>
-            <div class = "doc">
-                <div id="pl1"></div>
-                <div id="pl2"></div>
-            </div>
-
-        </div>
-        <div id="cf">
-            <h2>Cash Flow</h2>
-            <div class = "doc">
-                <div id="cf1"></div>
-                <div id="cf2"></div>
-            </div>
-
-        </div>
-    </div>
-    <div id="essential_info"></div>
-
 </body>
 </html>
 

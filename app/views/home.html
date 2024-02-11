@@ -145,7 +145,6 @@
                 $("#ticker_list").empty();
 
                 $.get("/api/ticker_search/", param).done(function(data){
-                    console.log(data)
                     config.tickersBySearch.tickers = data["bestMatches"];
                     
                     if(config.tickersBySearch.tickers == null) return;
@@ -213,7 +212,9 @@
                     config.portfolio.sectors = new Map();
                     config.portfolio.industries = new Map();
                     companiesData.companies.forEach(company => {
-                        config.portfolio.companies.push(company);
+                        const ticker = config.portfolio.tickers.find(ticker => ticker.symbol == company.Symbol);
+                        const companyWithName = Object.assign({"name": ticker.name}, company);
+                        config.portfolio.companies.push(companyWithName);
                         //セクターごとにまとめる
                         if(!config.portfolio.sectors.has(company.Sector)) config.portfolio.sectors.set(company.Sector, [company]);
                         else config.portfolio.sectors.get(company.Sector).push(company);
